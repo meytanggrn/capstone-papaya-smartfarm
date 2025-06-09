@@ -19,6 +19,7 @@ import Navbar from './components/Navbar.vue'
   padding: 0 !important;
   margin: 0 !important;
 }
+
 .main-content {
   flex: 1;
   min-width: 0;
@@ -28,6 +29,4 @@ import Navbar from './components/Navbar.vue'
   padding: 0 !important;
   margin: 0 !important;
 }
-
-
 </style>
