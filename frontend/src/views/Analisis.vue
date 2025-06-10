@@ -93,56 +93,60 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
-import Chart from 'chart.js/auto';
-import { io } from 'socket.io-client';
-import * as tf from '@tensorflow/tfjs';
-import axios from 'axios';
+import Chart from 'chart.js/auto'; // Untuk membuat grafik
+import { io } from 'socket.io-client'; // Untuk koneksi Socket.IO (real-time)
+import * as tf from '@tensorflow/tfjs'; // Untuk model Machine Learning lokal
+import axios from 'axios'; // Untuk melakukan permintaan HTTP ke API backend
 
+// Komponen Vue kustom yang diimpor
 import DateFilter from '../components/common/DateFilter.vue';
 import NavButtons from '../components/common/NavButtons.vue';
 import ChartDisplay from '../components/ChartDisplay.vue';
 
-const apiUrl = 'http://localhost:5000';
+const apiUrl = 'http://localhost:5000'; // URL dasar API backend
 
-const chartEl = ref(null);
-const chartInstance = ref(null);
+const chartEl = ref(null); // Referensi ke elemen canvas grafik Chart.js
+const chartInstance = ref(null); // Instance objek grafik Chart.js
 
-// Inisialisasi data dummy 12 jam (atau ubah sesuai kebutuhan)
-const N = 12
-const labels = ref(Array.from({ length: N }, (_, i) => `Jam-${i + 1}`))
-const suhuArr = ref([])
-const humArr = ref([])
-const chyArr = ref([])
+// Inisialisasi data dummy untuk grafik real-time (N = 12 titik data terakhir)
+const N = 12;
+const labels = ref(Array.from({ length: N }, (_, i) => `Jam-${i + 1}`)); // Label waktu
+const suhuArr = ref([]); // Array untuk data suhu
+const humArr = ref([]); // Array untuk data kelembaban
+const chyArr = ref([]); // Array untuk data cahaya
 
-// ====== SOCKET.IO (MQTT relay dari backend) =====
-let socket
+let socket; // Variabel untuk menyimpan instance socket
 function setupSocket() {
-  socket = io(apiUrl);
-  // Hanya update array, geser data jika sudah N data
+  socket = io(apiUrl); // Menghubungkan ke server Socket.IO
+  // Event listener untuk 'sensor-update': Menerima objek data sensor
   socket.on('sensor-update', data => {
-    if (currentView.value === 'realtime') {
+    if (currentView.value === 'realtime') { // Hanya perbarui jika tampilan sedang di 'realtime'
       updateSensorArr(data);
     }
   });
+  // Event listener untuk 'sensor-single': Menerima pembaruan topik MQTT tunggal
   socket.on('sensor-single', ({ topic, value }) => {
     if (currentView.value === 'realtime') {
       console.log('MQTT update (original):', topic, value);
       let data = {};
+      // Memparsing nilai berdasarkan topik MQTT
       if (topic === 'SMART-FARM/temp') data.temperature = parseFloat(value);
       if (topic === 'SMART-FARM/hum') data.humidity = parseFloat(value);
       if (topic === 'SMART-FARM/chy') data.cahaya = parseFloat(value);
-      updateSensorArr(data);
+      updateSensorArr(data); // Perbarui array sensor
     }
   });
   console.log("Socket.IO client initialized.");
 }
 
+// Fungsi untuk memperbarui array data sensor dan grafik real-time
 function updateSensorArr(data) {
   if (currentView.value === 'realtime' && chartInstance.value) {
-    const nowLabel = new Date().toLocaleTimeString().slice(0, 5);
-    labels.value.push(nowLabel);
-    if (labels.value.length > N) labels.value.shift();
+    const nowLabel = new Date().toLocaleTimeString().slice(0, 5); // Ambil waktu saat ini (HH:MM)
+    labels.value.push(nowLabel); // Tambahkan label waktu baru
+    if (labels.value.length > N) labels.value.shift(); // Geser jika melebihi N data
 
+    // Logika yang sama untuk setiap jenis sensor: tambahkan data baru, geser jika melebihi N
     if ('temperature' in data) {
       suhuArr.value.push(data.temperature);
       if (suhuArr.value.length > N) suhuArr.value.shift();
@@ -163,6 +167,7 @@ function updateSensorArr(data) {
     chartInstance.value.update();
   }
 }
+
 
 // Untuk prediksi
 const inputValue = ref(30)
@@ -354,7 +359,16 @@ function handleNewNavSelection(navType) {
 }
 
 // ===== CHART.JS =====
-onMounted(() => {
+onMounted(async() => {
+  try {
+    model.value = await tf.loadLayersModel('/../public/model-prediksi/tfjs_model/model.json')
+    console.log('Model TF.js berhasil dimuat!')
+  } catch (e) {
+    modelError.value = 'Gagal memuat model TF.js lokal. Pastikan path-nya benar.'
+    console.error('Error memuat model TF.js:', e)
+  } finally {
+    loadingModel.value = false
+  }
   if (chartEl.value) {
     chartInstance.value = new Chart(chartEl.value, {
       type: 'line',

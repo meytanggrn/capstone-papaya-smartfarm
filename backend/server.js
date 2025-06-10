@@ -20,6 +20,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/lahan', lahanRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', require('./routes/diseases'));
+app.use('/model', express.static(path.join(__dirname, 'public/model')));
 
 const pool = new Pool({
     user: 'admin',
