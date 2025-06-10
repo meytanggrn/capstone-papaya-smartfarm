@@ -2,10 +2,9 @@
   <header class="navbar">
     <input class="search" placeholder="Search" v-model="search"/>
     <div class="navbar-actions">
-      <button class="notif-btn"><i class="icon-bell"></i></button>
+      <!-- <button class="notif-btn"><i class="fa-regular fa-bell"></i></button> -->
       <div class="profile-dropdown" @click="toggleDropdown">
-        <img :src="userPhoto" class="avatar"/>
-        <span>{{ userName }}</span>
+        <font-awesome-icon icon="user" /><span> {{ userName }}</span>
         <i class="icon-caret"></i>
         <div class="dropdown-menu" v-if="showDropdown">
           <div v-for="lahan in lahanList" :key="lahan.id" class="dropdown-item" @click="selectLahan(lahan)">
@@ -25,7 +24,7 @@ import axios from 'axios'
 const apiUrl = 'http://localhost:5000'
 const search = ref('')
 const userName = ref('')
-const userPhoto = ref('/default-avatar.png')
+const userPhoto = ref('/../assets/user-icon.png')
 const lahanList = ref([])
 const showDropdown = ref(false)
 
@@ -43,7 +42,7 @@ onMounted(async () => {
       user = JSON.parse(userRaw)
     }
     userName.value = user?.name || 'Profil'
-    userPhoto.value = user?.photoUrl || '/default-avatar.png'
+    userPhoto.value = user?.photoUrl || '/../assets/user-icon.png'
 
 
     // ambil semua lahan user

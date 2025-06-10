@@ -44,7 +44,6 @@
             <button>+ Tambah Lahan</button>
           </router-link>
         </div>
-
         <div v-if="error" style="color:red; margin-top: 24px;">{{ error }}</div>
 
         <!-- Baris Dashboard: Sensor dan Penyakit -->
@@ -54,11 +53,11 @@
             <h2>Data Sensor Realtime</h2>
             <div class="sensor-grid">
               <div class="sensor-card">
-                <div class="sensor-title">Cahaya</div>
+                <div class="sensor-title">Cahaya <font-awesome-icon icon="sun" size="lg" style="color: #edd535;" /> </div>
                 <div class="sensor-value">{{ sensor.cahaya ?? '-' }} <span>Lux</span></div>
               </div>
               <div class="sensor-card">
-                <div class="sensor-title">Suhu</div>
+                <div class="sensor-title">Suhu <font-awesome-icon icon="temperature-three-quarters" size="lg" style="color: #de4917;" /></div>
                 <div class="sensor-value">{{ sensor.temperature ?? '-' }} <span>°C</span></div>
               </div>
               <div class="sensor-card">
@@ -93,7 +92,7 @@
                 </div>
               </div>
             <button class="camera-btn" @click="goToScan">
-              <img src="#" width="32" />
+              <div class="camera-icon"><font-awesome-icon icon="camera" size="2xl" /></div>
             </button>
           </section>
         </div>

@@ -4,6 +4,18 @@ import App from './App.vue'
 import router from './router'
 import 'leaflet/dist/leaflet.css'
 
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faSun, faTemperatureThreeQuarters, faTint, faSeedling, faCamera, faUser, faBell } from '@fortawesome/free-solid-svg-icons'
+
+library.add(faSun, faTemperatureThreeQuarters, faTint, faSeedling, faCamera, faUser, faBell)
+
+
+
 const app = createApp(App)
-app.use(router)   
+
+app.component('font-awesome-icon', FontAwesomeIcon)
+
+app.use(router) 
+
 app.mount('#app')
