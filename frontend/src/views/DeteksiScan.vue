@@ -10,34 +10,32 @@ const fotoFile = ref(null)
 const error = ref('')
 const loading = ref(false)
 const loadingMessage = ref('Mengupload...')
-const model = ref(null) // Untuk menyimpan model TF.js
-const imagePreview = ref(null) // Untuk menampilkan preview gambar
-const predictionResult = ref(null) // Untuk menyimpan hasil prediksi
-const backendInitialized = ref(false) // Tambahkan ref untuk melacak inisialisasi backend
-const debugMode = ref(true) // Aktifkan mode debug
+const model = ref(null) 
+const imagePreview = ref(null) 
+const predictionResult = ref(null) 
+const backendInitialized = ref(false) 
+const debugMode = ref(true)
 
-const IMAGE_SIZE = 256 // Sesuaikan dengan ukuran input model Anda (256x256)
+const IMAGE_SIZE = 256 
 
-// Muat model TF.js saat komponen dimuat
 onMounted(async () => {
   loadingMessage.value = 'Memuat model AI...'
   loading.value = true
   try {
-    // Inisialisasi backend TF.js
-    await tf.ready() // Pastikan TF.js siap
-    tf.setBackend('webgl') // Atau 'cpu', 'wasm' sesuai kebutuhan
+
+    await tf.ready() 
+    tf.setBackend('cpu') 
     console.log(`TFJS backend: ${tf.getBackend()}`)
-    backendInitialized.value = true // Setel ke true setelah berhasil diinisialisasi
+    backendInitialized.value = true 
     if (debugMode.value) console.log('Backend berhasil diinisialisasi')
 
-    // Muat model TF.js
     model.value = await tf.loadLayersModel('/model/tfjs_model/model.json')
     console.log('Model TF.js berhasil dimuat!')
     if (debugMode.value) console.log('Model berhasil dimuat')
-    loading.value = false // Set loading ke false setelah model berhasil dimuat
+    loading.value = false 
   } catch (e) {
     loading.value = false
-    error.value = 'Gagal memuat model AI. Periksa koneksi atau path model.' // Tambahkan pesan error ke UI
+    error.value = 'Gagal memuat model AI. Periksa koneksi atau path model.' 
     console.error('Error memuat model TF.js:', e)
   }
 })
@@ -53,16 +51,16 @@ const onFileChange = e => {
   } else {
     imagePreview.value = null
   }
-  predictionResult.value = null // Reset hasil prediksi saat gambar berubah
+  predictionResult.value = null 
 }
 
 function preprocessImage(image) {
   if (debugMode.value) console.log('Memproses gambar...')
   const tensor = tf.browser.fromPixels(image)
-    .resizeNearestNeighbor([IMAGE_SIZE, IMAGE_SIZE]) // Ubah ukuran ke 256x256
+    .resizeNearestNeighbor([IMAGE_SIZE, IMAGE_SIZE]) 
     .toFloat()
-    .div(tf.scalar(255.0)) // Normalisasi ke rentang [0, 1]
-    .expandDims() // Tambahkan dimensi batch (jadikan [1, 256, 256, 3])
+    .div(tf.scalar(255.0)) 
+    .expandDims() 
   if (debugMode.value) console.log('Gambar berhasil diproses')
   return tensor
 }
@@ -94,9 +92,8 @@ const predictDisease = async imageFile => {
               console.log('Bentuk gambar yang diproses:', processedImage.shape)
               console.log('Tipe data gambar yang diproses:', processedImage.dtype)
             }
-            // Pastikan model.value ada sebelum memanggil predict
             if (!model.value) {
-              reject('Model belum dimuat.') // Tolak promise jika model belum dimuat
+              reject('Model belum dimuat.') 
               if (debugMode.value) console.log('Model tidak tersedia saat prediksi')
               return
             }
@@ -108,8 +105,7 @@ const predictDisease = async imageFile => {
               console.log('Bentuk prediksi:', predictions.shape)
               console.log('Tipe data prediksi:', predictions.dtype)
             }
-            // Sesuaikan classNames ini dengan label output model Anda
-            // Berdasarkan model.json, Anda memiliki 5 unit output di Dense layer terakhir
+
             const classNames = [
               'Bercak Daun',
               'Hawar Daun',
@@ -128,8 +124,8 @@ const predictDisease = async imageFile => {
               )
             if (debugMode.value) console.log('Prediksi teratas:', topPrediction)
 
-            processedImage.dispose() // Hapus tensor dari memori
-            predictions.dispose() // Hapus tensor dari memori
+            processedImage.dispose() 
+            predictions.dispose()
             resolve(topPrediction)
           } catch (predictError) {
             console.error('Error during prediction:', predictError)
@@ -163,7 +159,6 @@ const submitDeteksi = async () => {
     error.value = 'Pilih gambar terlebih dahulu.'
     return
   }
-  // Kondisi ini seharusnya tidak perlu terlalu sering terpanggil jika onMounted berhasil
   if (!model.value) {
     error.value = 'Model AI belum dimuat. Mohon tunggu atau periksa konsol.'
     return
@@ -178,15 +173,14 @@ const submitDeteksi = async () => {
     predictionResult.value = prediction
     console.log('Hasil Prediksi:', prediction)
 
-    // Sekarang, kirim gambar dan hasil prediksi ke backend
     loadingMessage.value = 'Mengupload data...'
     const formData = new FormData()
     formData.append('foto', fotoFile.value)
     formData.append(
       'status',
       prediction.className === 'Sehat' ? 'Sehat' : 'Terdeteksi'
-    ) // Sesuaikan status
-    formData.append('nama_penyakit', prediction.className) // Perbaikan: Kirim nama kelas yang benar
+    ) 
+    formData.append('nama_penyakit', prediction.className) 
 
     const { data } = await axios.post(`${apiUrl}/api/deteksi`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -198,7 +192,7 @@ const submitDeteksi = async () => {
     }, 400)
   } catch (e) {
     loading.value = false
-    error.value = e || 'Gagal melakukan deteksi atau upload.' // Tampilkan pesan error dari promise reject
+    error.value = e || 'Gagal melakukan deteksi atau upload.' 
     console.error('Error saat deteksi atau upload:', e)
   }
 }
@@ -231,7 +225,6 @@ const submitDeteksi = async () => {
 </template>
 
 <style scoped>
-/* Tambahkan gaya CSS Anda di sini, jika belum ada */
 .scan-layout {
   display: flex;
   justify-content: center;
