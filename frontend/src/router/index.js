@@ -6,15 +6,18 @@ import Dashboard from '../views/Dashboard.vue'
 import DeteksiScan from '../views/DeteksiScan.vue';
 import DeteksiDetail from '../views/DeteksiPenyakitDetail.vue';
 import Analisis from '../views/Analisis.vue';
+import Rekomendasi from '../views/Rekomendasi.vue';
 
 const routes = [
-    { path: '/login', component: Login },
-    { path: '/register', component: Register },
-    { path: '/dashboard', component: Dashboard},
-    { path: '/input-lahan', component: InputLahan },
-    { path: '/deteksi/scan', component: DeteksiScan },
-    { path: '/deteksi/:id', component: DeteksiDetail },
-    { path: '/analisis', component: Analisis }
+    { path: '/login', component: Login, name: 'Login' },
+    { path: '/register', component: Register, name: 'Register' },
+    { path: '/dashboard', component: Dashboard, name: 'Dashboard' },
+    { path: '/input-lahan', component: InputLahan, name: 'InputLahan' },
+    { path: '/deteksi/scan', component: DeteksiScan, name: 'DeteksiScan' },
+    { path: '/deteksi/:id', component: DeteksiDetail, name: 'DeteksiDetail' },
+    { path: '/analisis', component: Analisis, name: 'Analisis' },
+    { path: '/rekomendasi', component: Rekomendasi, name: 'Rekomendasi' },
+    { path: '/', redirect: '/dashboard' },
 ];
 
 export default createRouter({

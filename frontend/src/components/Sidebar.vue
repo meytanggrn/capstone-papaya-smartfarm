@@ -1,8 +1,7 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
-      <span class="logo">🌱</span>
-      <h2 class="app-title">SmartFarm</h2>
+      <img src="/images/smartfarm-logo1.png" alt="SmartFarm Logo" class="app-logo" />
     </div>
     <nav>
       <ul>
@@ -37,7 +36,7 @@ const isActive = (path) => route.path === path
   min-height: 100vh;
   background: #186146;
   color: #fff;
-  padding: 28px 0 18px 0;
+  padding: -5px 0 18px 0;
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 14px #0001;
@@ -46,17 +45,17 @@ const isActive = (path) => route.path === path
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-left: 24px;
-  margin-bottom: 36px;
+  margin-left: 5px;
+  margin-bottom: -40px;
 }
-.logo {
-  font-size: 2.3rem;
+
+.app-logo { 
+  width: 200px; 
+  height: 200px;
+  object-fit: contain;
+  display: block;
 }
-.app-title {
-  font-size: 1.4rem;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
+
 nav ul {
   list-style: none;
   padding: 0;
