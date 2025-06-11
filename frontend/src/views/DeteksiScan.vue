@@ -23,6 +23,7 @@ const IMAGE_SIZE = 256
 
 // Inisialisasi TFJS backend & load model
 onMounted(async () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   loading.value = true
   loadingMessage.value = 'Menyiapkan AI...'
 

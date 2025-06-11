@@ -4,6 +4,7 @@
     <input v-model="email" type="email" placeholder="Email" required />
     <input v-model="password" type="password" placeholder="Password" required />
     <button type="submit">Register</button>
+    <p>Sudah memiliki akun?<a href="Login.vue"></a></p>
     <p v-if="error">{{ error }}</p>
   </form>
 </template>

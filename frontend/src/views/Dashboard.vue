@@ -315,7 +315,7 @@ const updateLahan = () => {
 .sensor-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px 18px;
+  gap: 15px 15px;
   margin-top: 18px;
 }
 
@@ -323,13 +323,20 @@ const updateLahan = () => {
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 2px 12px #0001;
-  padding: 18px 20px;
+  padding: 15px 20px;
   min-width: 120px;
-  min-height: 70px;
+  min-height: 80px;
   text-align: center;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sensor-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .sensor-title {
@@ -351,12 +358,12 @@ const updateLahan = () => {
 
 .disease-section {
   position: relative;
-  width: 440px;
+  max-width: 440px;
 }
 
 .disease-list-container {
   width: 100%;
-  min-height: 200px; /* tinggi minimum agar kontainer selalu kelihatan */
+  min-height: 200px; 
   background: #fff;
   border-radius: 18px;
   box-shadow: 0 2px 12px #0001;
