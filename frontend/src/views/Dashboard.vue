@@ -71,30 +71,40 @@
             </div>
           </section>
 
-          <!-- Deteksi Penyakit -->
-          <section class="disease-section">
-            <h2>Deteksi Penyakit</h2>
-              <div class="disease-list">
-                <div
-                  class="disease-card"
-                  v-for="d in diseaseList"
-                  :key="d.id"
-                  @click="goToDetail(d.id)"
-                  style="cursor: pointer"
-                >
-                  <img :src="d.imageUrl || '/default.png'" width="38" alt="deteksi" />
-                  <div>
-                    <div class="disease-title">{{ d.title }}</div>
-                    <div class="disease-devices">{{ d.devices }} DEVICES</div>
-                    <div class="disease-desc">{{ d.deskripsi }}</div>
-                  </div>
-                  <span class="disease-arrow">›</span>
-                </div>
-              </div>
-            <button class="camera-btn" @click="goToScan">
-              <div class="camera-icon"><font-awesome-icon icon="camera" size="2xl" /></div>
-            </button>
-          </section>
+<!-- Deteksi Penyakit -->
+<section class="disease-section">
+  <h2>Deteksi Penyakit</h2>
+  <div class="disease-list-container">
+    <div class="disease-list">
+      <template v-if="diseaseList.length > 0">
+        <div
+          class="disease-card"
+          v-for="d in diseaseList"
+          :key="d.id"
+          @click="goToDetail(d.id)"
+          style="cursor: pointer"
+        >
+          <img :src="d.imageUrl || '/default.png'" width="38" alt="deteksi" />
+          <div>
+            <div class="disease-title">{{ d.title }}</div>
+            <div class="disease-devices">{{ d.devices }} DEVICES</div>
+            <div class="disease-desc">{{ d.deskripsi }}</div>
+          </div>
+          <span class="disease-arrow">›</span>
+        </div>
+      </template>
+      <template v-else>
+        <div class="disease-empty-message">
+          Tidak ada data deteksi penyakit
+        </div>
+      </template>
+    </div>
+  </div>
+  <button class="camera-btn" @click="goToScan">
+    <div class="camera-icon"><font-awesome-icon icon="camera" size="2xl" /></div>
+  </button>
+</section>
+
         </div>
       </template>
     </main>
@@ -220,19 +230,28 @@ const updateLahan = () => {
 
 .banner {
   background: linear-gradient(90deg, #a2d5c6, #ffc857);
-  border-radius: 14px;
-  padding: 5px;
+  border-radius: 50px;
+  padding: 0px;
   color: #124e39;
-  margin-bottom: 36px;
+  margin-bottom: 20px;
+}
+
+.banner h2,
+.banner p {
+    margin: 0;
+    padding: px 0;
 }
 
 /* Foto Lahan */
 .lahan-preview {
-  margin-bottom: 28px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: center; 
+  width: 100%;
 }
 .lahan-foto-bg {
+  max-width: 720px;
   width: 100%;
-  max-width: 900px;
   height: 320px;
   border-radius: 18px;
   background-size: cover;
@@ -331,14 +350,37 @@ const updateLahan = () => {
 }
 
 .disease-section {
-  /* flex: 1; */
   position: relative;
+  width: 440px;
 }
-.disease-list {
+
+.disease-list-container {
+  width: 100%;
+  min-height: 200px; /* tinggi minimum agar kontainer selalu kelihatan */
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 12px #0001;
+  padding: 20px 16px;
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: flex-start;
+  justify-content: center;
+  margin-bottom: 18px;
 }
+
+.disease-list {
+  width: 100%;
+}
+
+.disease-empty-message {
+  color: #bbb;
+  font-size: 1.11rem;
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+  padding: 32px 8px;
+  letter-spacing: 0.2px;
+}
+
 .disease-card {
   background: #fff;
   border-radius: 16px;

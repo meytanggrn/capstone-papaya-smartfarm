@@ -8,9 +8,9 @@ import '@tensorflow/tfjs-backend-cpu'
 import * as tf from '@tensorflow/tfjs'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faSun, faTemperatureThreeQuarters, faTint, faSeedling, faCamera, faUser, faBell, faRightToBracket } from '@fortawesome/free-solid-svg-icons'
+import { faSun, faTemperatureThreeQuarters, faTint, faSeedling, faCamera, faUser, faBell, faRightFromBracket } from '@fortawesome/free-solid-svg-icons'
 
-library.add(faSun, faTemperatureThreeQuarters, faTint, faSeedling, faCamera, faUser, faBell, faRightToBracket)
+library.add(faSun, faTemperatureThreeQuarters, faTint, faSeedling, faCamera, faUser, faBell, faRightFromBracket)
 
 
 

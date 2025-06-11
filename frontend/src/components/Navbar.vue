@@ -14,7 +14,7 @@
           <div class="dropdown-divider"></div>
           <div class="dropdown-item logout-item" @click.stop="logout" v-if="hasToken">
             <font-awesome-icon icon="right-from-bracket" />
-            Logout
+            &emsp; Logout
           </div>
         </div>
       </div>
