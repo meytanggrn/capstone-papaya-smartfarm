@@ -5,20 +5,18 @@
       <!-- Chart Sensor -->
       <div class="chart-section-original"> <canvas ref="chartEl"></canvas>
       </div>
-      <div class="prediction-section-original">
-        <h3>Prediksi Panen (Asli)</h3>
-        <form @submit.prevent="doPredict">
-          <input v-model.number="inputValue" type="number" placeholder="Masukkan nilai suhu rata-rata" />
-          <button type="submit">Prediksi (Local TFJS)</button>
-        </form>
-        <form @submit.prevent="doPredictAPI" style="margin-top:12px;">
-          <input v-model.number="inputValue" type="number" placeholder="Masukkan nilai suhu rata-rata" />
-          <button type="submit">Prediksi via Backend API</button>
-        </form>
-        <div v-if="prediction !== null"><b>Prediksi Lokal:</b> {{ prediction }} kg</div>
-        <div v-if="predictionAPI !== null"><b>Prediksi API:</b> {{ predictionAPI }} kg</div>
-      </div>
-    </div>
+        <div class="prediksi-container">
+        <h2>Prediksi Panen Berdasarkan Suhu</h2>
+            <div>
+    <input v-model="inputValue" type="number" placeholder="Masukkan suhu" />
+    <button @click="predict">Prediksi Lokal</button>
+    <button @click="predictFromAPI">Prediksi dari API</button>
+
+    <p>Prediksi Lokal: {{ prediction ?? '-' }} kg</p>
+    <p>Prediksi API: {{ predictionAPI ?? '-' }} kg</p>
+  </div>
+</div>
+        </div>
 
     <div v-if="currentView !== 'realtime'" class="new-analisis-design-container">
       <div class="analysis-header-banner">
@@ -173,6 +171,8 @@ function updateSensorArr(data) {
 const inputValue = ref(30)
 const prediction = ref(null)
 const predictionAPI = ref(null)
+const loadingModel = ref(true)
+const modelError = ref('')
 
 // ====== TFJS LOCAL REGRESSION MODEL =====
 let model = null
@@ -186,23 +186,39 @@ async function setupModel() {
 }
 
 async function doPredict() {
-  if (!model) return
-  const input = tf.tensor2d([inputValue.value], [1, 1])
-  const output = await model.predict(input).data()
-  prediction.value = output[0].toFixed(2)
+  if (!model) {
+    prediction.value = 'Model belum dimuat';
+    return;
+  }
+  const input = tf.tensor2d([inputValue.value], [1, 1]);
+  const output = await model.predict(input).data();
+  prediction.value = output[0].toFixed(2);
 }
 
+
 // ====== BACKEND API PREDIKSI =====
-async function doPredictAPI() {
+const predictFromAPI = async () => {
   try {
-    const res = await axios.post(`${apiUrl}/api/predict`, {
-      suhu: inputValue.value
-    })
-    predictionAPI.value = res.data.result // pastikan sesuai response backend
-  } catch (e) {
-    predictionAPI.value = 'Gagal'
+    const response = await fetch('http://localhost:5000//api/prediksi', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ suhu: parseFloat(inputValue.value) })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    predictionAPI.value = data.prediksi?.toFixed(2) || 'Error';
+  } catch (error) {
+    console.error('Gagal prediksi dari API:', error);
+    predictionAPI.value = 'Gagal memuat prediksi dari server';
   }
-}
+};
+
 
 const currentView = ref('historical-chart');
 const selectedDateForHistorical = ref(new Date().toISOString().slice(0, 10)); // Default ke tanggal hari ini
@@ -360,15 +376,15 @@ function handleNewNavSelection(navType) {
 
 // ===== CHART.JS =====
 onMounted(async() => {
+  //prediksi
   try {
-    model.value = await tf.loadLayersModel('/../public/model-prediksi/tfjs_model/model.json')
-    console.log('Model TF.js berhasil dimuat!')
+    model = await tf.loadLayersModel('/model-prediksi/tfjs_model/model.json');
   } catch (e) {
-    modelError.value = 'Gagal memuat model TF.js lokal. Pastikan path-nya benar.'
-    console.error('Error memuat model TF.js:', e)
+    modelError.value = 'Gagal memuat model TF.js';
   } finally {
-    loadingModel.value = false
+    loadingModel.value = false;
   }
+  //chart
   if (chartEl.value) {
     chartInstance.value = new Chart(chartEl.value, {
       type: 'line',

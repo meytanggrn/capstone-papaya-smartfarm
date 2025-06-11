@@ -10,6 +10,7 @@ const path = require('path');
 const mqtt = require('mqtt');
 const { Pool } = require('pg');
 const app = express();
+const prediksiRoutes = require('./routes/prediksi'); 
 app.use(cors());
 app.use(express.json());
 
@@ -21,6 +22,7 @@ app.use('/api/lahan', lahanRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', require('./routes/diseases'));
 app.use('/model', express.static(path.join(__dirname, 'public/model')));
+app.use('/api/prediksi', prediksiRoutes);
 
 const pool = new Pool({
     user: 'admin',

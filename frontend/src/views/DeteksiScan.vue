@@ -23,8 +23,8 @@ onMounted(async () => {
   loading.value = true
   try {
 
-    await tf.ready() 
-    tf.setBackend('cpu') 
+    await tf.setBackend('webgl')
+    await tf.ready()
     console.log(`TFJS backend: ${tf.getBackend()}`)
     backendInitialized.value = true 
     if (debugMode.value) console.log('Backend berhasil diinisialisasi')
@@ -244,7 +244,7 @@ const submitDeteksi = async () => {
 }
 
 .btn-photo {
-  background-color: #4CAF50; /* Example green color */
+  background-color: #4CAF50; 
   color: white;
   padding: 10px 20px;
   border: none;
