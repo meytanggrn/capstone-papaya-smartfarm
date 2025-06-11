@@ -204,182 +204,305 @@ const updateLahan = () => {
 </script>
 
 <style scoped>
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8fafb;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.dashboard-main {
+  flex: 1;
+  padding: 0;
+}
+
+.banner {
+  background: linear-gradient(90deg, #a2d5c6, #ffc857);
+  border-radius: 14px;
+  padding: 5px;
+  color: #124e39;
+  margin-bottom: 36px;
+}
+
+/* Foto Lahan */
+.lahan-preview {
+  margin-bottom: 28px;
+}
+.lahan-foto-bg {
+  width: 100%;
+  max-width: 900px;
+  height: 320px;
+  border-radius: 18px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  box-shadow: 0 8px 32px #0003;
+  display: flex;
+  align-items: flex-end;
+}
+.lahan-overlay {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  margin: 0 0 24px 24px;
+  color: #fff;
+  padding: 16px 28px 14px 20px;
+  background: linear-gradient(90deg, #000b 80%, #0000 100%);
+  border-radius: 10px;
+}
+.lahan-title {
+  font-weight: bold;
+  font-size: 1.35rem;
+}
+.lahan-lokasi {
+  font-size: 1rem;
+  opacity: 0.86;
+}
+.lahan-badge {
+  position: absolute;
+  top: 18px;
+  right: 32px;
+  background: #fff;
+  color: #555;
+  padding: 7px 18px;
+  border-radius: 22px;
+  box-shadow: 0 2px 10px #0001;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+.badge-icon {
+  font-size: 1.25rem;
+  margin-right: 8px;
+}
+.lahan-preview-empty {
+  margin: 38px 0 0 0;
+}
+
+/* Dashboard Row */
+.dashboard-row {
+  display: flex;
+  gap: 48px;
+  margin-top: 32px;
+}
+
+.sensor-section {
+  width: 100%;
+  max-width: 400px;
+}
+
+.sensor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 18px;
+  margin-top: 18px;
+}
+
+.sensor-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px #0001;
+  padding: 18px 20px;
+  min-width: 120px;
+  min-height: 70px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.sensor-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.sensor-value {
+  font-size: 1.7rem;
+  font-weight: bold;
+  color: #24b47e;
+}
+
+.sensor-value span {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.disease-section {
+  /* flex: 1; */
+  position: relative;
+}
+.disease-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.disease-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 14px #0001;
+  padding: 15px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+}
+.disease-title {
+  font-weight: 600;
+}
+.disease-devices {
+  font-size: 0.9rem;
+  color: #777;
+}
+.disease-arrow {
+  margin-left: auto;
+  font-size: 2rem;
+  color: #bbb;
+}
+.camera-btn {
+  position: absolute;
+  right: 36px;
+  bottom: 36px;
+  background: #f2f3f4;
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px #0002;
+  cursor: pointer;
+}
+.camera-btn:hover {
+  background: #e2eeea;
+}
+.sensor-row {
+  display: flex;
+  gap: 22px;
+  margin-top: 18px;
+}
+.sensor-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px #0001;
+  padding: 18px 32px;
+  min-width: 140px;
+  text-align: center;
+}
+.sensor-title {
+  font-weight: 600;
+}
+.sensor-value {
+  font-size: 1.7rem;
+  font-weight: bold;
+  color: #24b47e;
+}
+
+/* ---------------------- */
+/*      RESPONSIVE        */
+/* ---------------------- */
+
+/* Tablet */
+@media (max-width: 1024px) {
   .dashboard-layout {
-    display: flex;
-    min-height: 100vh;
-    background: #f8fafb;
-    margin: 0;   
-    padding: 20px;  
-    box-sizing: border-box;
+    flex-direction: column;
+    padding: 12px;
   }
-
-  .dashboard-main {
-    flex: 1;
-    padding: 0;
-  }
-  .banner {
-    background: linear-gradient(90deg, #a2d5c6, #ffc857);
-    border-radius: 14px;
-    padding: 5px;
-    color: #124e39;
-    margin-bottom: 36px;
-  }
-
-  /* Foto Lahan */
-  .lahan-preview {
-    margin-bottom: 28px;
+  .dashboard-row {
+    flex-direction: column;
+    gap: 32px;
   }
   .lahan-foto-bg {
-    width: 100%;
-    max-width: 900px;
-    height: 320px;
-    border-radius: 18px;
-    background-size: cover;
-    background-position: center;
-    position: relative;
-    box-shadow: 0 8px 32px #0003;
-    display: flex;
-    align-items: flex-end;
+    height: 220px;
+    max-width: 100%;
   }
-  .lahan-overlay {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    margin: 0 0 24px 24px;
-    color: #fff;
-    padding: 16px 28px 14px 20px;
-    background: linear-gradient(90deg, #000b 80%, #0000 100%);
+  .banner {
+    margin-bottom: 24px;
+    padding: 12px;
+  }
+  .sensor-section {
+    max-width: 100%;
+  }
+  .disease-section {
+    margin-top: 28px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .dashboard-layout {
+    flex-direction: column;
+    padding: 7px;
+  }
+  .dashboard-main {
+    padding: 0 2px;
+  }
+  .banner {
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+    padding: 10px 8px;
     border-radius: 10px;
   }
-  .lahan-title {
-    font-weight: bold;
-    font-size: 1.35rem;
+  .lahan-foto-bg {
+    height: 130px;
+    border-radius: 8px;
+    margin-bottom: 10px;
   }
-  .lahan-lokasi {
-    font-size: 1rem;
-    opacity: 0.86;
+  .lahan-overlay {
+    margin: 0 0 10px 10px;
+    padding: 8px 12px 8px 10px;
+    border-radius: 6px;
+    font-size: 0.98rem;
   }
   .lahan-badge {
-    position: absolute;
-    top: 18px;
-    right: 32px;
-    background: #fff;
-    color: #555;
-    padding: 7px 18px;
-    border-radius: 22px;
-    box-shadow: 0 2px 10px #0001;
-    display: flex;
-    align-items: center;
-    font-weight: 500;
+    top: 6px;
+    right: 12px;
+    padding: 4px 10px;
+    font-size: 0.92rem;
+    border-radius: 13px;
   }
-  .badge-icon {
-    font-size: 1.25rem;
-    margin-right: 8px;
-  }
-  .lahan-preview-empty {
-    margin: 38px 0 0 0;
-  }
-
-  /* Dashboard Row */
   .dashboard-row {
-    display: flex;
-    gap: 48px;
-    margin-top: 32px;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 10px;
   }
-
   .sensor-section {
-    width: 100%;
-    max-width: 400px; 
+    max-width: 100%;
   }
-
   .sensor-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px 18px;
-    margin-top: 18px;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
-
   .sensor-card {
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 2px 12px #0001;
-    padding: 18px 20px;
-    min-width: 120px;
-    min-height: 70px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    min-width: unset;
+    min-height: 56px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 1rem;
   }
-
-  .sensor-title {
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-
-  .sensor-value {
-    font-size: 1.7rem;
-    font-weight: bold;
-    color: #24b47e;
-  }
-
-  .sensor-value span {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-left: 2px;
-  }
-
   .disease-section {
-    /* flex: 1; */
-    position: relative;
-  }
-  .disease-list {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    margin-top: 20px;
   }
   .disease-card {
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 2px 14px #0001;
-    padding: 15px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    cursor: pointer;
-  }
-  .disease-title {
-    font-weight: 600;
-  }
-  .disease-devices {
-    font-size: 0.9rem;
-    color: #777;
+    border-radius: 8px;
+    padding: 10px 14px;
+    gap: 10px;
+    font-size: 0.98rem;
   }
   .disease-arrow {
-    margin-left: auto;
-    font-size: 2rem;
-    color: #bbb;
+    font-size: 1.5rem;
   }
   .camera-btn {
-    position: absolute;
-    right: 36px;
-    bottom: 36px;
-    background: #f2f3f4;
-    border: none;
+    right: 10px;
+    bottom: 10px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 10px #0002;
-    cursor: pointer;
   }
-  .camera-btn:hover {
-    background: #e2eeea;
-  }
-  .sensor-row { display: flex; gap: 22px; margin-top: 18px; }
-  .sensor-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px #0001; padding: 18px 32px; min-width: 140px; text-align: center; }
-  .sensor-title { font-weight: 600; }
-  .sensor-value { font-size: 1.7rem; font-weight: bold; color: #24b47e; }
+}
+
 </style>
+
