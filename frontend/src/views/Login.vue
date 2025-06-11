@@ -21,7 +21,8 @@ const login = async () => {
     const res = await axios.post('http://localhost:5000/api/auth/login', { email: email.value, password: password.value });
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user)) 
-    router.push('/dashboard');
+window.dispatchEvent(new Event('token-updated'))
+router.push('/dashboard')
   } catch (e) {
     error.value = e.response?.data?.error || 'Gagal login';
   }

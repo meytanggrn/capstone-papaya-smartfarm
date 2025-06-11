@@ -6,27 +6,39 @@
       <router-view />
     </div>
   </div>
-  <!-- Optionally, router-view only for routes like /login, /register -->
   <router-view v-else />
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import Sidebar from './components/Sidebar.vue'
 import Navbar from './components/Navbar.vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+// State token yang reaktif
 const hasToken = ref(!!localStorage.getItem('token'))
 
+// Fungsi untuk update state saat login/logout
+function updateToken() {
+  hasToken.value = !!localStorage.getItem('token')
+}
+
 onMounted(() => {
-  // Jika tidak ada token, redirect ke /login (kecuali sudah di /login atau /register)
+  // Event listener saat login/logout, agar hasToken reaktif
+  window.addEventListener('token-updated', updateToken)
+
+  // Jika belum login, redirect ke /login (kecuali sudah di /login atau /register)
   if (!hasToken.value) {
     const publicRoutes = ['/login', '/register', '/forgot-password']
     if (!publicRoutes.includes(router.currentRoute.value.path)) {
       router.replace('/login')
     }
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('token-updated', updateToken)
 })
 </script>
 
