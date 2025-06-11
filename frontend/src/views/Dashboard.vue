@@ -141,26 +141,43 @@
     }
   }
 
+const updateLahan = () => {
+  const lahanRaw = localStorage.getItem('lahan_terpilih')
+  if (lahanRaw) {
+    lahan.value = JSON.parse(lahanRaw)
+    isWelcome.value = false
+  } else {
+    lahan.value = null
+    isWelcome.value = true
+  }
+}
   const socket = io(apiUrl)
   onMounted(async () => {
+  // 1. Listen event 'lahan-updated' biar preview update setiap dropdown lahan diubah
+  window.addEventListener('lahan-updated', updateLahan)
+  // 2. Ambil pilihan lahan sekarang dari localStorage
+  updateLahan()
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     userName.value = user.name || 'User'
     await fetchDiseaseList()
     const token = localStorage.getItem('token')
-    try {
-      const res = await axios.get(`${apiUrl}/api/lahan`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!res.data || res.data.length === 0) {
-        isWelcome.value = true
-      } else {
-        lahan.value = res.data[0]
+  try {
+    const res = await axios.get(`${apiUrl}/api/lahan`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    // Hanya set localStorage jika lahan_terpilih belum ada
+    if (!localStorage.getItem('lahan_terpilih')) {
+      if (res.data && res.data.length > 0) {
         localStorage.setItem('lahan_terpilih', JSON.stringify(res.data[0]))
+        updateLahan()
         isWelcome.value = false
+      } else {
+        isWelcome.value = true
       }
-    } catch (e) {
-      isWelcome.value = true
     }
+  } catch (e) {
+    isWelcome.value = true
+  }
     // Realtime sensor
     // ===== Realtime sensor dari Socket.IO =====
     socket.on('sensor-update', data => {
@@ -181,6 +198,7 @@
   onUnmounted(() => {
     socket.off('sensor-update')
     socket.off('sensor-single')
+    window.removeEventListener('lahan-updated', updateLahan)
   })
 
 </script>

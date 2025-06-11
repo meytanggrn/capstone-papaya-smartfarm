@@ -39,7 +39,8 @@ const toggleDropdown = () => {
 }
 const selectLahan = (lahan) => {
   localStorage.setItem('lahan_terpilih', JSON.stringify(lahan))
-  window.location.href = '/dashboard'
+  window.dispatchEvent(new Event('lahan-updated'))   // <--- Tambah ini
+  // Tidak perlu reload window.location.href!
   showDropdown.value = false
 }
 const logout = () => {
