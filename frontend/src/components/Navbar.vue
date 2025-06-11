@@ -28,7 +28,7 @@ import axios from 'axios'
 const apiUrl = 'http://localhost:5000'
 const search = ref('')
 const userName = ref('')
-const userPhoto = ref('/../assets/user-icon.png')
+const userPhoto = ref('/assets/user-icon.png')
 const lahanList = ref([])
 const showDropdown = ref(false)
 const hasToken = ref(!!localStorage.getItem('token'))
