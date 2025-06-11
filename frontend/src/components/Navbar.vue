@@ -1,6 +1,5 @@
 <template>
   <header class="navbar" v-if="hasToken">
-    <input class="search" placeholder="Search" v-model="search" />
     <div class="navbar-actions">
       <div class="profile-dropdown" @click="toggleDropdown">
         <img class="avatar" :src="userPhoto" alt="Profil" />
@@ -85,18 +84,15 @@ onMounted(async () => {
   padding: 18px 32px 18px 24px;
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
-}
-.search {
-  flex: 1;
-  padding: 10px;
-  border-radius: 15px;
-  border: 1px solid #ececec;
-  margin-right: 36px;
+  /* Jika mau fixed di atas:
+  position: sticky; top: 0; z-index: 999;
+  */
 }
 .navbar-actions {
   display: flex;
   align-items: center;
   gap: 20px;
+  margin-left: auto;   /* <- INI YANG MEMBUAT PROFIL DI KANAN */
 }
 .avatar {
   width: 38px;

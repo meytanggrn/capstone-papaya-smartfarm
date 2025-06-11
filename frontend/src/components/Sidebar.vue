@@ -26,8 +26,8 @@
           <li :class="{active: isActive('/rekomendasi')}" @click="goto('/rekomendasi')">
             <span>🔎 Rekomendasi</span>
           </li>
-          <li :class="{active: isActive('/history')}" @click="goto('/history')">
-            <span>🕑 History</span>
+          <li :class="{active: isActive('/about')}" @click="goto('/about')">
+            <span>🕑 About</span>
           </li>
         </ul>
       </nav>

@@ -7,6 +7,7 @@ import DeteksiScan from '../views/DeteksiScan.vue';
 import DeteksiDetail from '../views/DeteksiPenyakitDetail.vue';
 import Analisis from '../views/Analisis.vue';
 import Rekomendasi from '../views/Rekomendasi.vue';
+import About from '../views/About.vue';
 
 const routes = [
     { path: '/login', component: Login },
@@ -17,6 +18,7 @@ const routes = [
     { path: '/deteksi/:id', component: DeteksiDetail },
     { path: '/analisis', component: Analisis },
     { path: '/rekomendasi', component: Rekomendasi},
+    { path: '/about', component: About},
 ];
 
 export default createRouter({
