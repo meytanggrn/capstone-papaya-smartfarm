@@ -5,7 +5,11 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   optimizeDeps: {
-  include: ['@tensorflow/tfjs', '@tensorflow/tfjs-backend-webgl']
-}
+    include: [
+      '@tensorflow/tfjs',
+      '@tensorflow/tfjs-backend-webgl',
+      '@tensorflow/tfjs-backend-cpu'
+    ]
+  }
 
 })
