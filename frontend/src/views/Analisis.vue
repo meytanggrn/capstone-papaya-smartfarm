@@ -1,211 +1,126 @@
 <template>
   <div class="analisis-page-wrapper">
-    <div v-if="currentView === 'realtime'" class="original-analisis-content">
-      <h2>Analisis Sensor & Prediksi Panen (Real-time)</h2>
-      <!-- Chart Sensor -->
-      <div class="chart-section-original"> <canvas ref="chartEl"></canvas>
-      </div>
-        <div class="prediksi-container">
-        <h2>Prediksi Panen Berdasarkan Suhu</h2>
-            <div>
-    <input v-model="inputValue" type="number" placeholder="Masukkan suhu" />
-    <button @click="predict">Prediksi Lokal</button>
-    <button @click="predictFromAPI">Prediksi dari API</button>
+<div class="prediksi-container">
+  <h2>Prediksi Panen Berdasarkan Sensor</h2>
+  <div>
+    <input v-model.number="suhu" type="number" placeholder="Suhu (°C)" />
+    <input v-model.number="kelembapan" type="number" placeholder="Kelembapan (%)" />
+    <input v-model.number="cahaya" type="number" placeholder="Cahaya (Lux)" />
+    <input v-model.number="ph" type="number" placeholder="pH" />
 
-    <p>Prediksi Lokal: {{ prediction ?? '-' }} kg</p>
-    <p>Prediksi API: {{ predictionAPI ?? '-' }} kg</p>
+    <button @click="doPredict" :disabled="predictionLoading">
+      {{ predictionLoading ? 'Memproses...' : 'Prediksi (Local TFJS)' }}
+    </button>
+    <button @click="predictFromAPI">Prediksi via Backend API</button>
+
+    <p v-if="prediction !== null">Prediksi Lokal: {{ prediction }} </p>
+    <p v-if="predictionError" style="color: red;">{{ predictionError }}</p>
+    <p><b>Prediksi API:</b> {{ predictionAPI }}</p>
   </div>
 </div>
-        </div>
 
-    <div v-if="currentView !== 'realtime'" class="new-analisis-design-container">
-      <div class="analysis-header-banner">
-        ANALISIS DATA SENSOR
-      </div>
-
-      <div class="analysis-controls-info">
-        <NavButtons @nav-selected="handleNewNavSelection" />
-
-        <div class="date-display-wrapper">
-          <span class="displayed-date">{{ formattedSelectedDateForHistorical }}</span>
-          <DateFilter @date-changed="handleHistoricalDateChange" />
-        </div>
-      </div>
-
-      <div class="main-content-area">
-        <div v-if="currentView === 'historical-chart'" class="chart-section">
-          <h3 class="chart-title">{{ currentHistoricalChartTitle }}</h3>
-          <ChartDisplay :chartData="currentHistoricalChartData" chartType="line" />
-        </div>
-        <div v-if="currentView === 'new-prediction'" class="prediction-section">
-          <h3>Prediksi Panen</h3>
-          <form @submit.prevent="doPredict">
-            <input v-model.number="inputValue" type="number" placeholder="Masukkan nilai suhu rata-rata" />
-            <button type="submit">Prediksi (Local TFJS)</button>
-          </form>
-          <form @submit.prevent="doPredictAPI" style="margin-top:12px;">
-            <input v-model.number="inputValue" type="number" placeholder="Masukkan nilai suhu rata-rata" />
-            <button type="submit">Prediksi via Backend API</button>
-          </form>
-          <div v-if="prediction !== null"><b>Prediksi Lokal:</b> {{ prediction }} kg</div>
-          <div v-if="predictionAPI !== null"><b>Prediksi API:</b> {{ predictionAPI }} kg</div>
-        </div>
-
-        <div class="right-sidebar-placeholder">
-          <h3>Informasi Tambahan</h3>
-
-          <div class="info-card">
-            <h4>Ringkasan Data ({{ formattedSelectedDateForHistorical }})</h4>
-            <p><strong>Suhu Rata-rata:</strong> {{ averageSuhuComputed }} °C</p>
-            <p><strong>Kelembaban Rata-rata:</strong> {{ averageKelembabanComputed }} %</p>
-            <p><strong>Cahaya Rata-rata:</strong> {{ averageCahayaComputed }} Lux</p>
-            <p><strong>pH Rata-rata:</strong> {{ averagePHComputed }}</p>
-          </div>
-
-          <div class="info-card">
-            <h4>Kondisi Optimal Pepaya</h4>
-            <ul>
-              <li>Suhu: 25 - 30 °C</li>
-              <li>Kelembaban: 60 - 80 %</li>
-              <li>Cahaya: 500 - 1500 Lux</li>
-              <li>pH Tanah: 6.0 - 7.0</li>
-            </ul>
-          </div>
-
-          <div class="info-card">
-            <h4>Saran Cepat</h4>
-            <p v-if="averageSuhuComputed > 30 && averageSuhuComputed !== 'N/A'">Suhu cenderung tinggi, pertimbangkan
-              peneduh!</p>
-            <p v-else-if="averageKelembabanComputed < 60 && averageKelembabanComputed !== 'N/A'">Kelembaban rendah,
-              perlu penyiraman ekstra!</p>
-            <p v-else-if="averagePHComputed < 6.0 && averagePHComputed !== 'N/A'">pH tanah rendah, perlu penyesuaian!
-            </p>
-            <p v-else-if="historicalChartLabels.length > 0">Kondisi umum tampak baik untuk pertumbuhan.</p>
-            <p v-else>Tidak ada data untuk saran.</p>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
-import Chart from 'chart.js/auto'; // Untuk membuat grafik
-import { io } from 'socket.io-client'; // Untuk koneksi Socket.IO (real-time)
-import * as tf from '@tensorflow/tfjs'; // Untuk model Machine Learning lokal
-import axios from 'axios'; // Untuk melakukan permintaan HTTP ke API backend
+import { ref, onMounted } from 'vue'
+import * as tf from '@tensorflow/tfjs'
 
-// Komponen Vue kustom yang diimpor
-import DateFilter from '../components/common/DateFilter.vue';
-import NavButtons from '../components/common/NavButtons.vue';
-import ChartDisplay from '../components/ChartDisplay.vue';
+const suhu = ref(0)
+const kelembapan = ref(0)
+const cahaya = ref(0)
+const ph = ref(0)
 
-const apiUrl = 'http://localhost:5000'; // URL dasar API backend
-
-const chartEl = ref(null); // Referensi ke elemen canvas grafik Chart.js
-const chartInstance = ref(null); // Instance objek grafik Chart.js
-
-// Inisialisasi data dummy untuk grafik real-time (N = 12 titik data terakhir)
-const N = 12;
-const labels = ref(Array.from({ length: N }, (_, i) => `Jam-${i + 1}`)); // Label waktu
-const suhuArr = ref([]); // Array untuk data suhu
-const humArr = ref([]); // Array untuk data kelembaban
-const chyArr = ref([]); // Array untuk data cahaya
-
-let socket; // Variabel untuk menyimpan instance socket
-function setupSocket() {
-  socket = io(apiUrl); // Menghubungkan ke server Socket.IO
-  // Event listener untuk 'sensor-update': Menerima objek data sensor
-  socket.on('sensor-update', data => {
-    if (currentView.value === 'realtime') { // Hanya perbarui jika tampilan sedang di 'realtime'
-      updateSensorArr(data);
-    }
-  });
-  // Event listener untuk 'sensor-single': Menerima pembaruan topik MQTT tunggal
-  socket.on('sensor-single', ({ topic, value }) => {
-    if (currentView.value === 'realtime') {
-      console.log('MQTT update (original):', topic, value);
-      let data = {};
-      // Memparsing nilai berdasarkan topik MQTT
-      if (topic === 'SMART-FARM/temp') data.temperature = parseFloat(value);
-      if (topic === 'SMART-FARM/hum') data.humidity = parseFloat(value);
-      if (topic === 'SMART-FARM/chy') data.cahaya = parseFloat(value);
-      updateSensorArr(data); // Perbarui array sensor
-    }
-  });
-  console.log("Socket.IO client initialized.");
-}
-
-// Fungsi untuk memperbarui array data sensor dan grafik real-time
-function updateSensorArr(data) {
-  if (currentView.value === 'realtime' && chartInstance.value) {
-    const nowLabel = new Date().toLocaleTimeString().slice(0, 5); // Ambil waktu saat ini (HH:MM)
-    labels.value.push(nowLabel); // Tambahkan label waktu baru
-    if (labels.value.length > N) labels.value.shift(); // Geser jika melebihi N data
-
-    // Logika yang sama untuk setiap jenis sensor: tambahkan data baru, geser jika melebihi N
-    if ('temperature' in data) {
-      suhuArr.value.push(data.temperature);
-      if (suhuArr.value.length > N) suhuArr.value.shift();
-    }
-    if ('humidity' in data) {
-      humArr.value.push(data.humidity);
-      if (humArr.value.length > N) humArr.value.shift();
-    }
-    if ('cahaya' in data) {
-      chyArr.value.push(data.cahaya);
-      if (chyArr.value.length > N) chyArr.value.shift();
-    }
-
-    chartInstance.value.data.labels = labels.value;
-    chartInstance.value.data.datasets[0].data = suhuArr.value;
-    chartInstance.value.data.datasets[1].data = humArr.value;
-    chartInstance.value.data.datasets[2].data = chyArr.value;
-    chartInstance.value.update();
-  }
-}
-
-
-// Untuk prediksi
-const inputValue = ref(30)
 const prediction = ref(null)
+const predictionError = ref('')
+const predictionLoading = ref(false)
 const predictionAPI = ref(null)
-const loadingModel = ref(true)
-const modelError = ref('')
-
-// ====== TFJS LOCAL REGRESSION MODEL =====
 let model = null
+
+// Inisialisasi model lokal saat komponen di-mount
 async function setupModel() {
-  model = tf.sequential()
-  model.add(tf.layers.dense({ inputShape: [1], units: 1 }))
-  model.compile({ optimizer: 'sgd', loss: 'meanSquaredError' })
-  const xs = tf.tensor1d([28, 29, 30, 31, 32])
-  const ys = tf.tensor1d([52, 54, 55, 57, 58])
-  await model.fit(xs, ys, { epochs: 120 })
+  model = await tf.loadGraphModel('/model-prediksi/tfjs_model/model.json');
+}
+
+
+onMounted(setupModel)
+
+function normalize(val, min, max) {
+  return (val - min) / (max - min)
+}
+const NORM = {
+  suhu:      { min: 22, max: 35 },
+  kelembapan:{ min: 60, max: 85 },
+  cahaya:    { min: 500, max: 1500 },
+  ph:        { min: 4.5, max: 7.5 },
 }
 
 async function doPredict() {
-  if (!model) {
-    prediction.value = 'Model belum dimuat';
-    return;
+  predictionLoading.value = true
+  predictionError.value = ''
+  prediction.value = null
+
+  try {
+    if (!model) {
+      predictionError.value = 'Model belum dimuat. Silakan tunggu sebentar.'
+      return
+    }
+
+    const s = parseFloat(suhu.value)
+    const k = parseFloat(kelembapan.value)
+    const c = parseFloat(cahaya.value)
+    const p = parseFloat(ph.value)
+    if ([s, k, c, p].some(isNaN)) {
+      predictionError.value = 'Semua input harus angka!'
+      return
+    }
+
+    // NORMALISASI DI SINI!
+    const vals = [
+      normalize(s, NORM.suhu.min, NORM.suhu.max),
+      normalize(k, NORM.kelembapan.min, NORM.kelembapan.max),
+      normalize(c, NORM.cahaya.min, NORM.cahaya.max),
+      normalize(p, NORM.ph.min, NORM.ph.max)
+    ]
+
+    const inputTensor = tf.tensor2d([vals], [1, 4])
+    const outputTensor = model.predict(inputTensor)
+    const outputArray = await outputTensor.data()
+    const hasil = outputArray[0]
+
+    if (isNaN(hasil)) {
+      predictionError.value = 'Hasil prediksi tidak valid (NaN).'
+      prediction.value = null
+    } else {
+      prediction.value = hasil.toFixed(2)
+    }
+
+    inputTensor.dispose()
+    outputTensor.dispose()
+  } catch (e) {
+    predictionError.value = 'Gagal melakukan prediksi: ' + (e.message || e)
+    prediction.value = null
+  } finally {
+    predictionLoading.value = false
   }
-  const input = tf.tensor2d([inputValue.value], [1, 1]);
-  const output = await model.predict(input).data();
-  prediction.value = output[0].toFixed(2);
 }
 
 
-// ====== BACKEND API PREDIKSI =====
+
+
+// Prediksi via backend API
 const predictFromAPI = async () => {
   try {
-    const response = await fetch('http://localhost:5000//api/prediksi', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ suhu: parseFloat(inputValue.value) })
-    });
+    const response = await fetch('http://localhost:5000/api/prediksi', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    suhu: 27,
+    kelembaban: 70,
+    cahaya: 1200,
+    ph: 6.5,
+  })
+});
 
     if (!response.ok) {
       throw new Error(`Server error: ${response.status}`);
@@ -218,384 +133,42 @@ const predictFromAPI = async () => {
     predictionAPI.value = 'Gagal memuat prediksi dari server';
   }
 };
-
-
-const currentView = ref('historical-chart');
-const selectedDateForHistorical = ref(new Date().toISOString().slice(0, 10)); // Default ke tanggal hari ini
-const currentSensorTypeForHistorical = ref('cahaya');
-
-// Data untuk Chart Historis
-const historicalSensorData = ref({
-  suhu: [],
-  kelembaban: [],
-  cahaya: [],
-  pH: [],
-});
-const historicalChartLabels = ref([]);
-
-const currentHistoricalChartTitle = computed(() => {
-  switch (currentSensorTypeForHistorical.value) {
-    case 'suhu': return 'Data Suhu';
-    case 'kelembaban': return 'Data Kelembaban Udara';
-    case 'cahaya': return 'Data Intensitas Cahaya';
-    case 'pH': return 'Data pH Tanah';
-    default: return 'Data Sensor';
-  }
-});
-
-const currentHistoricalChartData = computed(() => {
-  return {
-    labels: historicalChartLabels.value,
-    datasets: [
-      {
-        label: currentHistoricalChartTitle.value,
-        data: historicalSensorData.value[currentSensorTypeForHistorical.value],
-        borderColor: getHistoricalChartColor(currentSensorTypeForHistorical.value),
-        backgroundColor: getHistoricalChartBgColor(currentSensorTypeForHistorical.value),
-        tension: 0.4,
-        fill: false,
-      },
-    ],
-  };
-});
-
-// warna garis chart
-function getHistoricalChartColor(type) {
-  switch (type) {
-    case 'suhu': return 'gradient-cahaya';
-    case 'kelembaban': return 'gradient-cahaya';
-    case 'cahaya': return 'gradient-cahaya';
-    case 'pH': return 'gradient-cahaya';
-    default: return 'gradient-cahaya';
-  }
-}
-
-function getHistoricalChartBgColor(type) {
-  switch (type) {
-    case 'suhu': return 'rgba(255, 99, 132, 0.2)';
-    case 'kelembaban': return 'rgba(54, 162, 235, 0.2)';
-    case 'cahaya': return 'rgba(110, 231, 183, 0.2)';
-    case 'pH': return 'rgba(75, 192, 192, 0.2)';
-    default: return 'rgba(204, 204, 204, 0.2)';
-  }
-}
-
-const formattedSelectedDateForHistorical = computed(() => {
-  if (!selectedDateForHistorical.value) return '';
-  const date = new Date(selectedDateForHistorical.value);
-  const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-  return date.toLocaleDateString('id-ID', options);
-});
-
-// --- Computed properties untuk menghitung rata-rata data (Informasi Tambahan) ---
-const averageSuhuComputed = computed(() => {
-  if (historicalSensorData.value.suhu.length === 0) return 'N/A';
-  const sum = historicalSensorData.value.suhu.reduce((a, b) => a + b, 0);
-  return (sum / historicalSensorData.value.suhu.length).toFixed(1);
-});
-
-const averageKelembabanComputed = computed(() => {
-  if (historicalSensorData.value.kelembaban.length === 0) return 'N/A';
-  const sum = historicalSensorData.value.kelembaban.reduce((a, b) => a + b, 0);
-  return (sum / historicalSensorData.value.kelembaban.length).toFixed(1);
-});
-
-const averageCahayaComputed = computed(() => {
-  if (historicalSensorData.value.cahaya.length === 0) return 'N/A';
-  const sum = historicalSensorData.value.cahaya.reduce((a, b) => a + b, 0);
-  return (sum / historicalSensorData.value.cahaya.length).toFixed(1);
-});
-
-const averagePHComputed = computed(() => {
-  if (historicalSensorData.value.pH.length === 0) return 'N/A';
-  const sum = historicalSensorData.value.pH.reduce((a, b) => a + b, 0);
-  return (sum / historicalSensorData.value.pH.length).toFixed(1);
-});
-// --- Akhir dari computed properties ---
-
-async function fetchHistoricalSensorData(type, date) {
-  if (currentView.value !== 'historical-chart' || !date) return;
-
-  console.log(`Fetching historical ${type} data for date: ${date}`);
-
-  try {
-    // --- Mock Data untuk sementara (GANTI DENGAN FETCH API NYATA) ---
-    const mockHistorical = generateMockHistoricalSensorData(type, date);
-    historicalChartLabels.value = mockHistorical.labels;
-    historicalSensorData.value[type] = mockHistorical.data;
-    console.log('Historical data fetched (mock):', mockHistorical);
-
-  } catch (error) {
-    console.error(`Gagal mengambil data historis ${type}:`, error);
-    historicalChartLabels.value = [];
-    historicalSensorData.value[type] = [];
-  }
-}
-
-function generateMockHistoricalSensorData(type, date) {
-  const hours = Array.from({ length: 24 }, (_, i) => `${i < 10 ? '0' + i : i}:00`);
-  let dataPoints = [];
-  const baseValue = {
-    'suhu': 28,
-    'kelembaban': 70,
-    'cahaya': 500,
-    'pH': 6.5
-  }[type] || 0;
-
-  dataPoints = hours.map((_, i) => {
-    let value = baseValue + (Math.random() * 5 - 2.5);
-    if (type === 'cahaya') {
-      if (i < 6 || i > 18) value = (baseValue * 0.1) + (Math.random() * 20);
-      else value = baseValue + (Math.sin(i / 3) * 200) + (Math.random() * 100);
-    } else if (type === 'pH') {
-      value = 6.0 + Math.sin(i / 5) * 0.5 + Math.random() * 0.1;
-    }
-    return parseFloat(value.toFixed(2));
-  });
-
-  return { labels: hours, data: dataPoints };
-}
-
-function handleHistoricalDateChange(date) {
-  selectedDateForHistorical.value = date;
-  fetchHistoricalSensorData(currentSensorTypeForHistorical.value, selectedDateForHistorical.value);
-}
-
-function handleNewNavSelection(navType) {
-  if (navType === 'prediksi-panen') {
-    currentView.value = 'new-prediction';
-  } else if (navType === 'realtime') {
-    currentView.value = 'realtime';
-  }
-  else {
-    currentView.value = 'historical-chart';
-    currentSensorTypeForHistorical.value = navType;
-    fetchHistoricalSensorData(navType, selectedDateForHistorical.value);
-  }
-}
-
-// ===== CHART.JS =====
-onMounted(async() => {
-  //prediksi
-  try {
-    model = await tf.loadLayersModel('/model-prediksi/tfjs_model/model.json');
-  } catch (e) {
-    modelError.value = 'Gagal memuat model TF.js';
-  } finally {
-    loadingModel.value = false;
-  }
-  //chart
-  if (chartEl.value) {
-    chartInstance.value = new Chart(chartEl.value, {
-      type: 'line',
-      data: {
-        labels: labels.value,
-        datasets: [
-          { label: 'Suhu (°C)', data: suhuArr.value, borderColor: '#27ae60', backgroundColor: '#b7ffd6', tension: 0.4 },
-          { label: 'Kelembapan Udara (%)', data: humArr.value, borderColor: '#3498db', backgroundColor: '#c9eaff', tension: 0.4 },
-          { label: 'Cahaya (Lux)', data: chyArr.value, borderColor: '#f5b041', backgroundColor: '#f9e6b5', tension: 0.4 }
-        ]
-      },
-      options: { responsive: true }
-    });
-  }
-
-  setupSocket();
-  setupModel();
-
-  if (currentView.value !== 'realtime') {
-    fetchHistoricalSensorData(currentSensorTypeForHistorical.value, selectedDateForHistorical.value);
-  }
-});
-
-onUnmounted(() => {
-  if (chartInstance.value) chartInstance.value.destroy();
-  if (socket) socket.disconnect();
-});
 </script>
 
 <style scoped>
 .analisis-page-wrapper {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 500px;
   margin: 0 auto;
   font-family: 'Arial', sans-serif;
 }
-
-.original-analisis-content {
-  margin-bottom: 40px;
-  background: #fff;
-  border-radius: 14px;
-  padding: 26px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.chart-section-original {
-  background: #fff;
-  border-radius: 14px;
-  padding: 26px;
-  margin-bottom: 20px;
-}
-
-.prediction-section-original {
+.prediction-section {
   background: #f8fafb;
   border-radius: 14px;
   padding: 18px 14px;
   margin-top: 18px;
-}
-
-.analysis-header-banner {
-  background: linear-gradient(to right, #6EE7B7, #10B981);
-  color: white;
-  padding: 20px;
-  text-align: center;
-  font-size: 1.8rem;
-  font-weight: bold;
-  border-radius: 10px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.analysis-controls-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 25px;
-  background-color: #fff;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.date-display-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.displayed-date {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.main-content-area {
-  display: flex;
-  gap: 25px;
-  flex-wrap: wrap;
-}
-
-.chart-section {
-  flex: 3;
-  min-width: 450px;
-  background: #fff;
-  border-radius: 14px;
-  padding: 26px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
-
-.chart-title {
-  text-align: center;
-  font-size: 1.5rem;
-  color: #333;
-  margin-bottom: 20px;
+input[type="number"] {
+  margin-right: 8px;
+  padding: 4px;
+  width: 100px;
 }
-
-.prediction-section {
-  flex: 3;
-  min-width: 450px;
-  background: #f8fafb;
-  border-radius: 14px;
-  padding: 18px 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.right-sidebar-placeholder h3 {
-  color: #333333;
-  font-size: 1.3rem;
-  text-align: center;
-  margin-bottom: 5px;
+button {
+  margin-right: 10px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid #10B981;
+  background: white;
+  color: #10B981;
   font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: -1px;
+  cursor: pointer;
 }
-
-.info-card h4 {
-  margin-top: 0;
-  color: #333;
-  font-size: 1.2rem;
-  margin-bottom: 12px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
-
-.right-sidebar-placeholder {
-  background-color: #f8f8f8;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  flex-basis: 300px;
-  flex-grow: 0;
-  flex-shrink: 0;
-}
-
-.info-card {
-  background-color: #ffffff;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  margin-bottom: 5px;
-  border: 1px solid #e0e0e0;
-}
-
-.info-card:last-child {
-  margin-bottom: 0;
-}
-
-/* Gaya untuk paragraf dan list di dalam kartu */
-.info-card p,
-.info-card ul {
-  font-size: 1rem;
-  /* Ukuran font teks isi sedikit lebih besar agar mudah dibaca */
-  color: #444;
-  /* Warna teks isi */
-  line-height: 1.6;
-  /* Jarak antar baris lebih nyaman */
-  margin-bottom: 8px;
-  /* Jarak antar paragraf/list item */
-}
-
-.info-card ul {
-  list-style: none;
-  /* Hilangkan bullet default */
-  padding-left: 0;
-  /* Hilangkan padding default */
-}
-
-.info-card ul li {
-  margin-bottom: 5px;
-  /* Jarak antar item list */
-}
-
-@media (max-width: 768px) {
-  .analysis-controls-info {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .main-content-area {
-    flex-direction: column;
-  }
-
-  .chart-section,
-  .prediction-section,
-  .right-sidebar-placeholder,
-  .chart-section-original,
-  .prediction-section-original {
-    min-width: unset;
-    width: 100%;
-  }
+p {
+  margin: 12px 0 0 0;
 }
 </style>

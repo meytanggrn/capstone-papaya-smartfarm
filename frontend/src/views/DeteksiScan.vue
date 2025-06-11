@@ -2,225 +2,166 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import * as tf from '@tensorflow/tfjs' // Import TensorFlow.js
+import * as tf from '@tensorflow/tfjs'
+import '@tensorflow/tfjs-backend-webgl'
+import '@tensorflow/tfjs-backend-cpu'
 
 const apiUrl = 'http://localhost:5000'
 const router = useRouter()
 const fotoFile = ref(null)
 const error = ref('')
 const loading = ref(false)
-const loadingMessage = ref('Mengupload...')
-const model = ref(null) 
-const imagePreview = ref(null) 
-const predictionResult = ref(null) 
-const backendInitialized = ref(false) 
+const loadingMessage = ref('')
+const model = ref(null)
+const imagePreview = ref(null)
+const predictionResult = ref(null)
+const backendInitialized = ref(false)
 const debugMode = ref(true)
-
-const IMAGE_SIZE = 256 
+const IMAGE_SIZE = 256
 
 onMounted(async () => {
-  loadingMessage.value = 'Memuat model AI...'
+  loadingMessage.value = 'Menyiapkan AI...'
   loading.value = true
   try {
-
     await tf.setBackend('webgl')
     await tf.ready()
-    console.log(`TFJS backend: ${tf.getBackend()}`)
-    backendInitialized.value = true 
-    if (debugMode.value) console.log('Backend berhasil diinisialisasi')
+    console.log('Backend aktif:', tf.getBackend())
+    backendInitialized.value = true
 
     model.value = await tf.loadLayersModel('/model/tfjs_model/model.json')
-    console.log('Model TF.js berhasil dimuat!')
-    if (debugMode.value) console.log('Model berhasil dimuat')
-    loading.value = false 
-  } catch (e) {
+    console.log('Model berhasil dimuat')
     loading.value = false
-    error.value = 'Gagal memuat model AI. Periksa koneksi atau path model.' 
-    console.error('Error memuat model TF.js:', e)
+  } catch (err) {
+    console.error('Inisialisasi gagal:', err)
+    error.value = 'Gagal inisialisasi model atau backend.'
+    loading.value = false
   }
 })
 
 const onFileChange = e => {
   fotoFile.value = e.target.files[0]
+  predictionResult.value = null
   if (fotoFile.value) {
     const reader = new FileReader()
-    reader.onload = event => {
-      imagePreview.value = event.target.result
-    }
+    reader.onload = ev => (imagePreview.value = ev.target.result)
     reader.readAsDataURL(fotoFile.value)
   } else {
     imagePreview.value = null
   }
-  predictionResult.value = null 
 }
 
 function preprocessImage(image) {
-  if (debugMode.value) console.log('Memproses gambar...')
   const tensor = tf.browser.fromPixels(image)
-    .resizeNearestNeighbor([IMAGE_SIZE, IMAGE_SIZE]) 
+    .resizeNearestNeighbor([IMAGE_SIZE, IMAGE_SIZE])
     .toFloat()
-    .div(tf.scalar(255.0)) 
-    .expandDims() 
-  if (debugMode.value) console.log('Gambar berhasil diproses')
+    .div(255.0)
+    .expandDims()
   return tensor
 }
 
 const predictDisease = async imageFile => {
-  if (debugMode.value) console.log('Memulai prediksi...')
-  if (!backendInitialized.value) {
-    error.value = 'Backend TF.js belum siap. Coba lagi nanti.'
-    if (debugMode.value) console.log('Backend belum diinisialisasi')
-    return null
-  }
-
-  if (!model.value) {
-    error.value = 'Model AI belum dimuat.'
-    if (debugMode.value) console.log('Model belum dimuat')
+  if (!backendInitialized.value || !model.value) {
+    error.value = 'AI belum siap digunakan.'
     return null
   }
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = async event => {
-      try {
-        const image = new Image()
-        image.onload = async () => {
-          try {
-            const processedImage = preprocessImage(image)
-            if (debugMode.value) {
-              console.log('Gambar telah diproses')
-              console.log('Bentuk gambar yang diproses:', processedImage.shape)
-              console.log('Tipe data gambar yang diproses:', processedImage.dtype)
-            }
-            if (!model.value) {
-              reject('Model belum dimuat.') 
-              if (debugMode.value) console.log('Model tidak tersedia saat prediksi')
-              return
-            }
-            if (debugMode.value) console.log('Memanggil model.predict...')
-            const predictions = model.value.predict(processedImage)
-            if (debugMode.value) {
-              console.log('Prediksi berhasil dilakukan')
-              console.log('Hasil prediksi:', predictions)
-              console.log('Bentuk prediksi:', predictions.shape)
-              console.log('Tipe data prediksi:', predictions.dtype)
-            }
+    reader.onload = async ev => {
+      const img = new Image()
+      img.onload = async () => {
+        try {
+          const input = preprocessImage(img)
+          const prediction = model.value.predict(input)
+          const probs = prediction.dataSync()
+          const labels = ['Bercak Daun', 'Hawar Daun', 'Karat Daun', 'Busuk Batang', 'Sehat']
 
-            const classNames = [
-              'Bercak Daun',
-              'Hawar Daun',
-              'Karat Daun',
-              'Busuk Batang',
-              'Sehat'
-            ]
+          const top = probs.map((p, i) => ({ className: labels[i], probability: p }))
+            .reduce((a, b) => (a.probability > b.probability ? a : b))
 
-            const topPrediction = Array.from(predictions.dataSync())
-              .map((probability, index) => ({
-                probability,
-                className: classNames[index]
-              }))
-              .reduce((prev, current) =>
-                prev.probability > current.probability ? prev : current
-              )
-            if (debugMode.value) console.log('Prediksi teratas:', topPrediction)
-
-            processedImage.dispose() 
-            predictions.dispose()
-            resolve(topPrediction)
-          } catch (predictError) {
-            console.error('Error during prediction:', predictError)
-            reject('Gagal melakukan prediksi.')
-            if (debugMode.value) console.log('Terjadi kesalahan selama prediksi')
-          }
+          input.dispose()
+          prediction.dispose()
+          resolve(top)
+        } catch (err) {
+          console.error('Prediksi gagal:', err)
+          reject('Gagal prediksi.')
         }
-        image.onerror = imageError => {
-          console.error('Error loading image:', imageError)
-          reject('Gagal memuat gambar.')
-          if (debugMode.value) console.log('Gagal memuat gambar')
-        }
-        image.src = event.target.result
-      } catch (readError) {
-        console.error('Error reading file:', readError)
-        reject('Gagal membaca file.')
-        if (debugMode.value) console.log('Gagal membaca file')
       }
+      img.onerror = () => reject('Gagal memuat gambar.')
+      img.src = ev.target.result
     }
-    reader.onerror = readerError => {
-      console.error('Error FileReader:', readerError)
-      reject('Gagal membaca file.')
-      if (debugMode.value) console.log('FileReader mengalami kesalahan')
-    }
+    reader.onerror = () => reject('Gagal membaca file.')
     reader.readAsDataURL(imageFile)
   })
 }
 
 const submitDeteksi = async () => {
-  if (!fotoFile.value) {
-    error.value = 'Pilih gambar terlebih dahulu.'
-    return
-  }
-  if (!model.value) {
-    error.value = 'Model AI belum dimuat. Mohon tunggu atau periksa konsol.'
+  if (!fotoFile.value || !model.value) {
+    error.value = 'Gambar atau model belum tersedia.'
     return
   }
 
-  error.value = ''
   loading.value = true
-  loadingMessage.value = 'Menganalisis gambar...'
-
+  loadingMessage.value = 'Memprediksi penyakit...'
   try {
     const prediction = await predictDisease(fotoFile.value)
     predictionResult.value = prediction
-    console.log('Hasil Prediksi:', prediction)
 
-    loadingMessage.value = 'Mengupload data...'
-    const formData = new FormData()
-    formData.append('foto', fotoFile.value)
-    formData.append(
-      'status',
-      prediction.className === 'Sehat' ? 'Sehat' : 'Terdeteksi'
-    ) 
-    formData.append('nama_penyakit', prediction.className) 
+    loadingMessage.value = 'Menyimpan ke server...'
+    const form = new FormData()
+    form.append('foto', fotoFile.value)
+    form.append('status', prediction.className === 'Sehat' ? 'Sehat' : 'Terdeteksi')
+    form.append('nama_penyakit', prediction.className)
 
-    const { data } = await axios.post(`${apiUrl}/api/deteksi`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    const { data } = await axios.post(`${apiUrl}/api/deteksi`, form)
 
-    setTimeout(() => {
-      loading.value = false
-      router.replace({ path: '/deteksi/detail', query: { id: data.id } })
-    }, 400)
-  } catch (e) {
+    router.replace({ path: '/deteksi/detail', query: { id: data.id } })
+  } catch (err) {
+    error.value = err || 'Gagal prediksi atau upload.'
+    console.error('Kesalahan:', err)
+  } finally {
     loading.value = false
-    error.value = e || 'Gagal melakukan deteksi atau upload.' 
-    console.error('Error saat deteksi atau upload:', e)
   }
 }
 </script>
+
 
 <template>
   <div>
     <h1>Deteksi Penyakit Tanaman</h1>
 
-    <input type="file" accept="image/*" @change="onFileChange" />
-    <img
-      v-if="imagePreview"
-      :src="imagePreview"
-      alt="Preview"
-      style="max-width: 200px;"
-    />
+    <input
+  type="file"
+  accept="image/*"
+  @change="onFileChange"
+  class="w-full border border-gray-300 rounded p-2"
+/>
 
-    <button @click="submitDeteksi" :disabled="loading">
-      {{ loading ? loadingMessage : 'Deteksi' }}
-    </button>
+<div v-if="imagePreview" class="text-center">
+  <img
+    :src="imagePreview"
+    alt="Preview"
+    class="max-w-xs mx-auto rounded shadow"
+  />
+</div>
 
-    <div v-if="predictionResult">
-      <h2>Hasil Prediksi:</h2>
-      <p>Penyakit: {{ predictionResult.className }}</p>
-      <p>Probabilitas: {{ predictionResult.probability }}</p>
-    </div>
+<button
+  @click="submitDeteksi"
+  :disabled="loading"
+  class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:bg-gray-400"
+>
+  {{ loading ? loadingMessage : 'Deteksi Sekarang' }}
+</button>
 
-    <div v-if="error" style="color: red;">{{ error }}</div>
+<div v-if="predictionResult" class="bg-white shadow p-4 rounded">
+  <h2 class="text-xl font-semibold text-green-700">Hasil Prediksi</h2>
+  <p><strong>Penyakit:</strong> {{ predictionResult.className }}</p>
+  <p><strong>Probabilitas:</strong> {{ (predictionResult.probability * 100).toFixed(2) }}%</p>
+</div>
+
+<div v-if="error" class="text-red-600 text-sm font-semibold">
+  {{ error }}
+</div>
   </div>
 </template>
 
