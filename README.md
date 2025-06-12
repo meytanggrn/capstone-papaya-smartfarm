@@ -54,7 +54,7 @@ Prasyarat Pastikan kamu telah menginstal:
 
 # ⚠️ Buka terminal baru untuk lanjut frontend
 
-# 3. Setup frontend
+## 3. Setup frontend
     cd ../frontend
     npm install
     npm run dev
