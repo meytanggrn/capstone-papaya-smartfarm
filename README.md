@@ -1,4 +1,4 @@
-🌱 PAPAYA SMART FARM
+# 🌱 PAPAYA SMART FARM
 ---
 ![smartfarm-logo](https://github.com/user-attachments/assets/3b51bddd-6724-4af4-ad09-ff55db0c438b)
 
@@ -7,13 +7,13 @@ yang dirancang untuk memantau dan memprediksi kondisi tanaman pepaya secara real
 Proyek ini dikembangkan sebagai bagian dari **Capstone Project Dicoding x DBS Indonesia**, dengan tujuan 
 untuk membantu petani meningkatkan produktivitas dan efisiensi melalui teknologi yang mudah diakses dan berbasis data.
 
-## 📊 Fitur Utama
+# 📊 Fitur Utama
 * Dashboard Monitoring 
 * Analisis Prediksi Panen
 * Deteksi Penyakit Dini
 * Rekomendasi Penanganan Tanaman
 
-## ⚙️ Cara Instalasi
+# ⚙️ Cara Instalasi
 Untuk menginstal dan menjalankan proyek ini secara lokal, ikuti langkah-langkah berikut:
 
 Prasyarat Pastikan kamu telah menginstal:
@@ -25,11 +25,11 @@ Prasyarat Pastikan kamu telah menginstal:
 
 ---
 
-# 1. Clone repository
+## 1. Clone repository
     git clone https://github.com/meytanggrn/capstone-papaya-smartfarm.git
     cd capstone-papaya-smartfarm
 
-# 2. Setup backend
+## 2. Setup backend
     cd backend
     npm install
 
@@ -59,7 +59,7 @@ Prasyarat Pastikan kamu telah menginstal:
     npm install
     npm run dev
 
-# 4. Setup database PostgreSQL
+## 4. Setup database PostgreSQL
 Masuk ke PostgreSQL dan jalankan perintah berikut:
 
     CREATE DATABASE papaya_db;
@@ -68,11 +68,11 @@ Jika tersedia file schema.sql:
 
     psql -U postgres -d papaya_db -f schema.sql
 
-# 5. (Opsional) Jalankan sistem sensor IoT
+## 5. (Opsional) Jalankan sistem sensor IoT
 Jalankan script Python atau program yang membaca data dari sensor<br>
 dan kirimkan ke endpoint backend menggunakan HTTP atau MQTT
 
-# 6. Akses aplikasi
+## 6. Akses aplikasi
 Frontend: buka di browser 
 
     http://localhost:5173/
@@ -81,7 +81,7 @@ Backend/API: akses di
 
     http://localhost:3000/
 
-## Penggunaan
+# 🖧 Penggunaan
 
 Setelah instalasi selesai, Anda bisa menjalankan proyek dengan perintah berikut:
 Contoh: Untuk menjalankan aplikasi web
@@ -93,13 +93,13 @@ Contoh: Untuk menjalankan aplikasi web
     
     npx serve dist
 
-## 📡 Akses
+# 📡 Akses
 Website dapat diakses melalui tautan ..................
 
-## 🤝 Kontribusi
+# 🤝 Kontribusi
 Kontribusi sangat terbuka! Silakan buat issue atau pull request.
 
-## 👨‍💻 Tim Pengembang
+# 👨‍💻 Tim Pengembang
 - Meytanggrn — [GitHub](https://github.com/meytanggrn)
 - Nitandy — [GitHub](https://github.com/QonitaNadyaR)
 - sal. — [GitHub](https://github.com/sasabiaa)
