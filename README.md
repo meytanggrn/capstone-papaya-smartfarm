@@ -90,7 +90,9 @@ Contoh: Untuk menjalankan aplikasi web
     npm run build
     npm run dev
   atau 
-    
+  
+    npm install
+    npm run build
     npx serve dist
 
 # 📡 Akses
