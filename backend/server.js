@@ -8,9 +8,9 @@ const dashboardRouter = require('./dashboard');
 const lahanRouter = require('./lahan');
 const path = require('path');
 const mqtt = require('mqtt');
-const { Pool } = require('pg');
 const app = express();
 const prediksiRoutes = require('./routes/prediksi'); 
+const diseasesRouter = require('./routes/diseases');
 app.use(cors());
 app.use(express.json());
 
@@ -20,23 +20,14 @@ const server = http.createServer(app);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/lahan', lahanRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/api', require('./routes/diseases'));
+app.use('/api', diseasesRouter);
 app.use('/model', express.static(path.join(__dirname, 'public/model')));
 app.use('/api/prediksi', prediksiRoutes);
-
-const pool = new Pool({
-    user: 'admin',
-    host: 'localhost',
-    database: 'papayasmart',
-    password: 'papayaadm',
-    port: 5432
-});
 
 const io = new Server(server, {
     cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// MQTT connect ke broker HiveMQ public
 const mqttClient = mqtt.connect('mqtt://broker.hivemq.com:1883');
 mqttClient.on('connect', () => {
     console.log('MQTT connected');
@@ -55,7 +46,7 @@ mqttClient.on('message', async (topic, message) => {
         } catch (e) {
             console.error('Gagal simpan ke database:', e);
         }
-        //  BROADCAST KE FRONTEND
+
         io.emit('sensor-update', data);
     } else if (
         topic === 'SMART-FARM/hum' ||
@@ -66,7 +57,7 @@ mqttClient.on('message', async (topic, message) => {
         io.emit('sensor-single', { topic, value: payload });
     }
 });
-// RestAPI untuk History
+
 app.get('/api/sensor/histori', async (req, res) => {
     try {
         const { rows } = await pool.query(
