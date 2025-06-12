@@ -9,7 +9,7 @@ const lahanRouter = require('./lahan');
 const path = require('path');
 const mqtt = require('mqtt');
 const app = express();
-const prediksiRoutes = require('./routes/prediksi'); 
+const prediksiRoutes = require('./routes/prediksi');
 const diseasesRouter = require('./routes/diseases');
 app.use(cors());
 app.use(express.json());

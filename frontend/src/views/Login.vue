@@ -2,10 +2,10 @@
   <div class="login-wrapper">
     <div class="login-card">
       <div class="login-left">
-        <h1 class="login-title">Welcome back!</h1>
+        <h1 class="login-title">Login</h1>
         <p class="login-desc">
-          Simplify your workflow and boost your productivity<br>
-          with <span class="brand">Papaya Smartfarm</span>. Get started for free.
+          Tingkatkan Produktivitas, Optimalkan Hasil Panen<br>
+          dengan <span class="brand">Papaya Smartfarm</span>.
         </p>
         <form @submit.prevent="login" class="login-form">
           <input v-model="email" type="email" placeholder="Email" class="input" required />
@@ -17,16 +17,8 @@
             {{ loading ? 'Logging in...' : 'Login' }}
           </button>
         </form>
-        <div class="or-divider">
-          <span>or continue with</span>
-        </div>
-        <div class="social-row">
-          <button class="social-btn" title="Login with Google"><i class="fab fa-google"></i></button>
-          <button class="social-btn" title="Login with Github"><i class="fab fa-github"></i></button>
-          <button class="social-btn" title="Login with Facebook"><i class="fab fa-facebook-f"></i></button>
-        </div>
         <div class="login-bottom">
-          Don't have an account? <router-link to="/register">Sign Up</router-link>
+          Belum memiliki akun? <router-link to="/register">Daftar Akun</router-link>
         </div>
         <div v-if="error" class="login-error">{{ error }}</div>
       </div>
@@ -34,8 +26,7 @@
 
         <img src="/assets/login-img.png" alt="Papaya Smartfarm" class="illustration" />
         <div class="right-desc">
-          Make your farm easier and more organized<br>
-          with <span class="brand">Papaya Smartfarm</span>
+          <span class="brand">Papaya Smartfarm</span> <br> Pertanian Presisi di Genggaman Anda. 
         </div>
       </div>
     </div>
@@ -46,6 +37,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import Swal from 'sweetalert2'
 
 // Inject font-awesome jika belum ada
 if (!document.getElementById('fa-cdn')) {
@@ -66,32 +58,33 @@ const login = async () => {
   loading.value = true
   error.value = ''
   try {
-    const res = await axios.post('http://localhost:5000/api/auth/login', {
+    const response = await axios.post('http://localhost:5000/api/auth/login', {
       email: email.value,
-      password: password.value,
+      password: password.value
     })
-    localStorage.setItem('token', res.data.token)
-    localStorage.setItem('user', JSON.stringify(res.data.user))
-    window.dispatchEvent(new Event('token-updated'))
-    router.push('/dashboard')
+    localStorage.setItem('token', response.data.token)
+    localStorage.setItem('user', JSON.stringify(response.data.user))
+    window.dispatchEvent(new Event('token-updated')) // <--- INI AGAR APP.VUE TAHU ADA TOKEN BARU
+    router.replace('/dashboard')
   } catch (e) {
-    error.value = e.response?.data?.error || 'Gagal login'
+    error.value = e.response?.data?.error || 'Login gagal'
   } finally {
     loading.value = false
   }
 }
+
+
 </script>
 
 <style scoped>
 .login-wrapper {
   min-height: 100vh;
-  background: linear-gradient(120deg, #e7ffd4 60%, #eafaea 100%);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .login-card {
-  background: #fff;
+  background: #0A6847;
   border-radius: 32px;
   box-shadow: 0 8px 32px #0001;
   display: flex;
@@ -113,23 +106,23 @@ const login = async () => {
 .login-title {
   font-size: 2.1rem;
   font-weight: bold;
-  color: #237c35;
+  color: #F6E9B2;
   margin-bottom: 13px;
 }
 .login-desc {
-  color: #646464;
+  color: #ffffff;
   font-size: 1.03rem;
   margin-bottom: 26px;
 }
 .brand {
   font-weight: 600;
-  color: #10B981;
+  color: #F6E9B2;
 }
 .login-form {
   margin-bottom: 12px;
 }
 .input {
-  width: 100%;
+  width: 90%;
   padding: 13px 18px;
   border-radius: 10px;
   border: 1px solid #e2efd4;
@@ -146,7 +139,7 @@ const login = async () => {
 }
 
 .forgot-link {
-  color: #10B981;
+  color: #F6E9B2;
   font-size: 0.98rem;
   text-decoration: none;
   transition: color 0.2s;
@@ -203,43 +196,20 @@ const login = async () => {
   z-index: 1;
 }
 
-.social-row {
-  display: flex;
-  gap: 13px;
-  justify-content: center;
-  margin-bottom: 10px;
-}
-.social-btn {
-  border: 1.5px solid #e2efd4;
-  background: #f9fef9;
-  border-radius: 8px;
-  padding: 9px 14px;
-  font-size: 1.13rem;
-  cursor: pointer;
-  transition: border 0.2s, background 0.2s;
-}
-.social-btn:hover {
-  border-color: #10B981;
-  background: #eafff3;
-}
-.social-btn:active {
-  background: #e0ffe2;
-}
-
 .login-bottom {
   text-align: center;
   font-size: 1.02rem;
-  color: #5b5b5b;
+  color: #ffffff;
   margin-top: 18px;
 }
 .login-bottom a {
-  color: #10B981;
+  color: #F6E9B2;
   font-weight: 500;
   text-decoration: none;
 }
 .login-bottom a:hover {
   text-decoration: underline;
-  color: #237c35;
+  font-weight: 500;
 }
 
 .login-error {

@@ -2,27 +2,29 @@
   <div class="register-wrapper">
     <div class="register-card">
       <div class="register-left">
-        <h1 class="register-title">Sign Up</h1>
+        <h1 class="register-title">Daftar Akun</h1>
         <p class="register-desc">
-          Daftarkan akun baru untuk mulai memonitor pertanianmu<br>
-          bersama <span class="brand">Papaya Smartfarm</span>
+          Tingkatkan Produktivitas, Optimalkan Hasil Panen<br>
+          dengan <span class="brand">Papaya Smartfarm</span>.
         </p>
         <form @submit.prevent="register" class="register-form">
-          <input v-model="name" type="text" placeholder="Nama" class="input" required />
+          <input v-model="name" type="text" placeholder="Name" class="input" required />
           <input v-model="email" type="email" placeholder="Email" class="input" required />
           <input v-model="password" type="password" placeholder="Password" class="input" required />
-          <button type="submit" class="btn-register">{{ loading ? 'Registering...' : 'Register' }}</button>
+          <button type="submit" class="btn-register" :disabled="loading">
+            {{ loading ? 'Menyimpan data' : 'Daftar Akun' }}
+          </button>
         </form>
         <div class="register-bottom">
-          Sudah memiliki akun?
-          <router-link to="/login">Login</router-link>
+          Sudah memiliki akun? <router-link to="/Login">Login</router-link>
         </div>
         <div v-if="error" class="register-error">{{ error }}</div>
       </div>
       <div class="register-right">
+
         <img src="/assets/login-img.png" alt="Papaya Smartfarm" class="illustration" />
         <div class="right-desc">
-          Jadikan pertanian lebih mudah, modern,<br> dan produktif dengan <span class="brand">Papaya Smartfarm</span>
+         <span class="brand">Papaya Smartfarm</span> <br> Pertanian Presisi di Genggaman Anda. 
         </div>
       </div>
     </div>
@@ -33,6 +35,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import Swal from 'sweetalert2'
 
 const name = ref('')
 const email = ref('')
@@ -44,31 +47,62 @@ const router = useRouter()
 const register = async () => {
   loading.value = true
   error.value = ''
+  Swal.fire({
+    title: 'Processing...',
+    html: 'Registering your account...',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    willOpen: () => {
+      Swal.showLoading()
+    }
+  })
+
   try {
+    console.log('Registering with:', { name: name.value, email: email.value, password: password.value })
     await axios.post('http://localhost:5000/api/auth/register', {
       name: name.value,
       email: email.value,
       password: password.value
     })
-    router.push('/login')
+    // Lanjut auto login
+    // const loginRes = await axios.post('http://localhost:5000/api/auth/login', {
+    //   email: email.value,
+    //   password: password.value
+    //})
+    // Simpan user dan token ke localStorage
+    localStorage.setItem('token', loginRes.data.token)
+    localStorage.setItem('user', JSON.stringify(loginRes.data.user))
+    window.dispatchEvent(new Event('token-updated'))
+    Swal.fire({
+      icon: 'success',
+      title: 'Registration Successful!',
+      showConfirmButton: false,
+      timer: 1400,
+      timerProgressBar: true,
+      didClose: () => {
+        router.push('/dashboard')
+      }
+    })
   } catch (e) {
+    Swal.close()
     error.value = e.response?.data?.error || 'Gagal register'
   } finally {
     loading.value = false
   }
 }
+
 </script>
 
 <style scoped>
 .register-wrapper {
   min-height: 100vh;
-  background: linear-gradient(120deg, #e7ffd4 60%, #eafaea 100%);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .register-card {
-  background: #fff;
+  background: #0A6847;
   border-radius: 32px;
   box-shadow: 0 8px 32px #0001;
   display: flex;
@@ -90,118 +124,173 @@ const register = async () => {
 .register-title {
   font-size: 2.1rem;
   font-weight: bold;
-  color: #237c35;
+  color: #F6E9B2;
   margin-bottom: 13px;
 }
 .register-desc {
-  color: #646464;
+  color: #ffffff;
   font-size: 1.03rem;
+  margin-bottom: 26px;
 }
-.register-card {
-  animation: popIn 0.75s cubic-bezier(.32,1.56,.63,1);
-}
-
-@keyframes popIn {
-  0% {
-    transform: scale(.96) translateY(22px);
-    opacity: 0;
-  }
-  100% {
-    transform: none;
-    opacity: 1;
-  }
-}
-
-.btn-register:active {
-  transform: scale(0.97);
-}
-/* Animasi pop-in card */
-.register-card, .login-card {
-  animation: popIn 0.7s cubic-bezier(.32,1.56,.63,1) 1;
-}
-
-@keyframes popIn {
-  0% {
-    transform: scale(.96) translateY(22px);
-    opacity: 0;
-  }
-  100% {
-    transform: none;
-    opacity: 1;
-  }
-}
-
-/* Tombol active animasi */
-.btn-register:active, .btn-login:active {
-  transform: scale(0.98);
-  filter: brightness(0.97);
-}
-
-/* Efek hover dan fokus input */
-.input:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px #82e5b5;
-}
-
-/* Responsive tweaks untuk layar sangat kecil */
-@media (max-width: 430px) {
-  .register-card, .login-card {
-    padding: 0;
-    border-radius: 10px;
-  }
-  .register-left, .register-right,
-  .login-left, .login-right {
-    padding: 12px 2vw;
-  }
-  .register-title, .login-title {
-    font-size: 1.05rem;
-  }
-  .register-desc, .right-desc,
-  .login-desc {
-    font-size: 0.92rem;
-  }
-}
-
-/* Brand highlight */
 .brand {
-  background: linear-gradient(90deg, #10B981 60%, #3fffac 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-weight: 700;
+  font-weight: 600;
+  color: #F6E9B2;
+}
+.register-form {
+  margin-bottom: 12px;
+}
+.input {
+  width: 90%;
+  padding: 13px 18px;
+  border-radius: 10px;
+  border: 1px solid #e2efd4;
+  margin-bottom: 12px;
+  font-size: 1.07rem;
+  background: #f9fef9;
+  transition: border 0.18s;
+}
+.input:focus { border-color: #10B981; }
+.opsi-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
-/* Placeholder styling (biar input lebih modern) */
-.input::placeholder {
-  color: #86b985;
-  opacity: 1;
-  font-size: 1.01em;
-  font-style: italic;
+.btn-register {
+  width: 100%;
+  padding: 13px 0;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #30b86a, #10B981 70%);
+  color: #fff;
+  font-size: 1.07rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 3px;
+  margin-bottom: 8px;
+  transition: background 0.2s, opacity 0.2s;
+}
+.btn-register:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.btn-register:hover:not(:disabled) {
+  background: linear-gradient(90deg, #237c35, #10B981 85%);
 }
 
-/* Pesan error animasi */
-.register-error, .login-error {
-  animation: shake .18s 2;
+.or-divider {
+  text-align: center;
+  color: #aaa;
+  margin: 16px 0 8px;
+  position: relative;
+  font-size: 0.98rem;
+}
+.or-divider span {
+  background: #fff;
+  padding: 0 10px;
+  position: relative;
+  z-index: 2;
+}
+.or-divider:before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: #ececec;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 1;
 }
 
-@keyframes shake {
-  0% { transform: translateX(0px);}
-  25% { transform: translateX(6px);}
-  50% { transform: translateX(-6px);}
-  75% { transform: translateX(4px);}
-  100% { transform: translateX(0px);}
+.register-bottom {
+  text-align: center;
+  font-size: 1.02rem;
+  color: #ffffff;
+  margin-top: 18px;
+}
+.register-bottom a {
+  color: #F6E9B2;
+  font-weight: 500;
+  text-decoration: none;
+}
+.register-bottom a:hover {
+  text-decoration: underline;
+  color: #F6E9B2;
 }
 
-/* Scrollbar agar tetap rapih di mobile */
-.register-wrapper, .login-wrapper {
-  scrollbar-width: thin;
-  scrollbar-color: #b8efce #eafaea;
+.register-error {
+  color: #d82323;
+  background: #fff0f1;
+  border-radius: 7px;
+  padding: 9px 14px;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.98rem;
+  border: 1px solid #ffd5d5;
 }
-.register-wrapper::-webkit-scrollbar, .login-wrapper::-webkit-scrollbar {
-  width: 8px;
-  background: #eafaea;
+
+.register-right {
+  background: linear-gradient(160deg, #eafff3 70%, #e7ffd4 100%);
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 32px;
 }
-.register-wrapper::-webkit-scrollbar-thumb, .login-wrapper::-webkit-scrollbar-thumb {
-  background: #b8efce;
-  border-radius: 12px;
+.illustration {
+  max-width: 340px;
+  width: 100%;
+  margin-bottom: 18px;
+  object-fit: contain;
+  border-radius: 19px;
+  box-shadow: 0 2px 16px #10b98133;
+}
+.right-desc {
+  color: #237c35;
+  text-align: center;
+  font-weight: 500;
+  font-size: 1.07rem;
+  margin-top: 3px;
+}
+.brand {
+  color: #10B981;
+  font-weight: 600;
+}
+
+/* Responsive styles */
+@media (max-width: 900px) {
+  .register-card {
+    flex-direction: column-reverse;
+    min-width: 320px;
+    width: 98vw;
+    max-width: 500px;
+    min-height: unset;
+    box-shadow: 0 8px 32px #00000022;
+  }
+  .register-right {
+    padding: 22px 20px 8px 20px;
+    min-height: 200px;
+  }
+  .register-left {
+    padding: 36px 24px 24px 24px;
+    min-width: unset;
+  }
+  .illustration {
+    max-width: 220px;
+    margin: 0 auto 12px auto;
+  }
+}
+@media (max-width: 600px) {
+  .register-card {
+    box-shadow: 0 2px 16px #00000018;
+    border-radius: 18px;
+  }
+  .register-wrapper {
+    padding: 12px;
+    min-height: 100dvh;
+  }
 }
 </style>
+

@@ -71,40 +71,39 @@
             </div>
           </section>
 
-<!-- Deteksi Penyakit -->
-<section class="disease-section">
-  <h2>Deteksi Penyakit</h2>
-  <div class="disease-list-container">
-    <div class="disease-list">
-      <template v-if="diseaseList.length > 0">
-        <div
-          class="disease-card"
-          v-for="d in diseaseList"
-          :key="d.id"
-          @click="goToDetail(d.id)"
-          style="cursor: pointer"
-        >
-          <img :src="d.imageUrl || '/default.png'" width="38" alt="deteksi" />
-          <div>
-            <div class="disease-title">{{ d.title }}</div>
-            <div class="disease-devices">{{ d.devices }} DEVICES</div>
-            <div class="disease-desc">{{ d.deskripsi }}</div>
-          </div>
-          <span class="disease-arrow">›</span>
-        </div>
-      </template>
-      <template v-else>
-        <div class="disease-empty-message">
-          Tidak ada data deteksi penyakit
-        </div>
-      </template>
-    </div>
-  </div>
-  <button class="camera-btn" @click="goToScan">
-    <div class="camera-icon"><font-awesome-icon icon="camera" size="2xl" /></div>
-  </button>
-</section>
-
+          <!-- Deteksi Penyakit -->
+          <section class="disease-section">
+            <h2>Deteksi Penyakit</h2>
+            <div class="disease-list-container">
+              <div class="disease-list">
+                <template v-if="diseaseList.length > 0">
+                  <div
+                    class="disease-card"
+                    v-for="d in diseaseList"
+                    :key="d.id"
+                    @click="goToDetail(d.id)"
+                    style="cursor: pointer"
+                  >
+                  <img :src="apiUrl + d.image_url" width="38" alt="deteksi" />
+                  <div>
+                    <div class="disease-title">{{ d.title }}</div>
+                    <div class="disease-status">{{ d.status }}</div>
+                    <div class="disease-date">{{ d.created_at ? (new Date(d.created_at)).toLocaleString() : '-' }}</div>
+                  </div>
+                    <span class="disease-arrow">›</span>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="disease-empty-message">
+                    Tidak ada data deteksi penyakit
+                  </div>
+                </template>
+              </div>
+            </div>
+            <button class="camera-btn" @click="goToScan">
+              <div class="camera-icon"><font-awesome-icon icon="camera" size="2xl" /></div>
+            </button>
+          </section>
         </div>
       </template>
     </main>
@@ -112,106 +111,109 @@
 </template>
 
 <script setup>
-  import { ref, onMounted, onUnmounted } from 'vue'
-  import { useRouter } from 'vue-router'
-  import { io } from 'socket.io-client'
-  import axios from 'axios'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { io } from 'socket.io-client'
+import axios from 'axios'
 
-  const router = useRouter()
-  const goToScan = () => router.push('/deteksi/scan')
-  const goToInputLahan = () => router.push('/input-lahan')
-  const apiUrl = 'http://localhost:5000'
+const router = useRouter()
+const apiUrl = 'http://localhost:5000'
 
-  const userName = ref('')
-  const lahan = ref(null)
-  const isWelcome = ref(false)
-  const error = ref('')
-  const sensor = ref({
-    humidity: null,
-    temperature: null,
-    cahaya: null,
-    kelembaban_tanah: null
-  })
-  const diseaseList = ref([])
+// State
+const userName = ref('')
+const lahan = ref(null)
+const error = ref('')
+const sensor = ref({
+  humidity: null,
+  temperature: null,
+  cahaya: null,
+  kelembaban_tanah: null
+})
+const diseaseList = ref([])
 
-  
-  function goToDetail(id) {
-    router.push(`/deteksi/${id}`)
-  }
-  const fetchDiseaseList = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      // Ambil data deteksi penyakit, misal hanya milik user yang sedang login
-      const res = await axios.get(`${apiUrl}/api/deteksi`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      diseaseList.value = res.data // data array dari backend
-    } catch (e) {
-      diseaseList.value = []
-    }
-  }
+// Otomatis true jika lahan null/kosong
+const isWelcome = computed(() => !lahan.value)
 
-const updateLahan = () => {
+function goToScan() {
+  router.push('/deteksi/scan')
+}
+function goToInputLahan() {
+  router.push('/input-lahan')
+}
+function goToDetail(id) { 
+  router.push(`/deteksi/${id}`) 
+}
+
+// Ambil lahan terpilih dari localStorage
+function updateLahan() {
   const lahanRaw = localStorage.getItem('lahan_terpilih')
-  if (lahanRaw) {
-    lahan.value = JSON.parse(lahanRaw)
-    isWelcome.value = false
-  } else {
-    lahan.value = null
-    isWelcome.value = true
+  lahan.value = lahanRaw ? JSON.parse(lahanRaw) : null
+}
+
+// Fetch list deteksi penyakit
+async function fetchDiseaseList() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${apiUrl}/api/deteksi`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    diseaseList.value = res.data // data array dari backend
+  } catch (e) {
+    diseaseList.value = []
   }
 }
-  const socket = io(apiUrl)
-  onMounted(async () => {
-  // 1. Listen event 'lahan-updated' biar preview update setiap dropdown lahan diubah
+
+// Initial & event listener
+const socket = io(apiUrl)
+onMounted(async () => {
+  // Event 'lahan-updated' dari dropdown profil (atau jika lahan terhapus)
   window.addEventListener('lahan-updated', updateLahan)
-  // 2. Ambil pilihan lahan sekarang dari localStorage
   updateLahan()
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    userName.value = user.name || 'User'
-    await fetchDiseaseList()
-    const token = localStorage.getItem('token')
+
+  // Ambil nama user
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  userName.value = user.name || 'User'
+
+  await fetchDiseaseList()
+
+  // Cek/ambil lahan dari backend jika lahan_terpilih kosong
+  const token = localStorage.getItem('token')
   try {
     const res = await axios.get(`${apiUrl}/api/lahan`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    // Hanya set localStorage jika lahan_terpilih belum ada
     if (!localStorage.getItem('lahan_terpilih')) {
       if (res.data && res.data.length > 0) {
         localStorage.setItem('lahan_terpilih', JSON.stringify(res.data[0]))
         updateLahan()
-        isWelcome.value = false
-      } else {
-        isWelcome.value = true
       }
     }
+    // Jika memang sudah kosong, isWelcome otomatis true
   } catch (e) {
-    isWelcome.value = true
+    error.value = 'Gagal ambil data lahan'
   }
-    // Realtime sensor
-    // ===== Realtime sensor dari Socket.IO =====
-    socket.on('sensor-update', data => {
-      // Data sensor format banyak field (misal {humidity, temperature, ...})
-      Object.assign(sensor.value, data)
-      console.log('sensor-update', data)
-    })
-    socket.on('sensor-single', ({ topic, value }) => {
-      const v = parseFloat(value)
-      if (topic === 'SMART-FARM/hum') sensor.value.humidity = v
-      if (topic === 'SMART-FARM/temp') sensor.value.temperature = v
-      if (topic === 'SMART-FARM/chy') sensor.value.cahaya = v
-      if (topic === 'SMART-FARM/kbtn') sensor.value.kelembaban_tanah = v
-      console.log('sensor-single', topic, v)
-    })
 
+  // Socket sensor realtime
+  socket.on('sensor-update', data => {
+    Object.assign(sensor.value, data)
+    // console.log('sensor-update', data)
   })
-  onUnmounted(() => {
-    socket.off('sensor-update')
-    socket.off('sensor-single')
-    window.removeEventListener('lahan-updated', updateLahan)
+  socket.on('sensor-single', ({ topic, value }) => {
+    const v = parseFloat(value)
+    if (topic === 'SMART-FARM/hum') sensor.value.humidity = v
+    if (topic === 'SMART-FARM/temp') sensor.value.temperature = v
+    if (topic === 'SMART-FARM/chy') sensor.value.cahaya = v
+    if (topic === 'SMART-FARM/kbtn') sensor.value.kelembaban_tanah = v
   })
+})
 
+onUnmounted(() => {
+  socket.off('sensor-update')
+  socket.off('sensor-single')
+  window.removeEventListener('lahan-updated', updateLahan)
+})
 </script>
+
 
 <style scoped>
 .dashboard-layout {

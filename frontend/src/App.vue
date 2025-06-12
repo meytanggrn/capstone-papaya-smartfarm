@@ -25,17 +25,15 @@ function updateToken() {
 }
 
 onMounted(() => {
-  // Event listener saat login/logout, agar hasToken reaktif
   window.addEventListener('token-updated', updateToken)
-
-  // Jika belum login, redirect ke /login (kecuali sudah di /login atau /register)
-  if (!hasToken.value) {
-    const publicRoutes = ['/login', '/register', '/forgot-password']
-    if (!publicRoutes.includes(router.currentRoute.value.path)) {
-      router.replace('/login')
-    }
+  const publicRoutes = ['/login', '/register', '/forgot-password']
+  if (!hasToken.value && !publicRoutes.includes(router.currentRoute.value.path)) {
+    router.replace('/login')
+  } else if (hasToken.value && publicRoutes.includes(router.currentRoute.value.path)) {
+    router.replace('/dashboard')
   }
 })
+
 
 onUnmounted(() => {
   window.removeEventListener('token-updated', updateToken)

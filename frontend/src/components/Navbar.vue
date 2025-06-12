@@ -45,8 +45,9 @@ const selectLahan = (lahan) => {
 const logout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
-  window.location.href = '/login'
+  router.replace('/login')
 }
+
 
 onMounted(async () => {
   if (!hasToken.value) return

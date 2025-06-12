@@ -406,6 +406,7 @@ onUnmounted(() => {
   margin-bottom: 18px;
 }
 .displayed-date{
+
   font-size: 20px;
   font-weight: 500;
 }

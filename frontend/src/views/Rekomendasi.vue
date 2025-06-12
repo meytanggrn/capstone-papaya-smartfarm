@@ -1,11 +1,25 @@
 <template>
   <div class="rekomendasi-page-container">
-    <div class="header-section">
-      <h1>Rekomendasi Pupuk & Obat</h1>
-      <p>Untuk kondisi tanaman: <strong>{{ detectedDiseaseName || 'Tidak Terdeteksi' }}</strong></p> 
-      <p v-if="userLocation">Harga disesuaikan untuk wilayah: <strong>{{ userLocation }}</strong></p>
-      <p>Dapatkan rekomendasi terbaik untuk kesehatan tanaman pepaya Anda, lengkap dengan informasi harga.</p>
-    </div>
+<div class="header-section">
+  <h1>Rekomendasi Pupuk & Obat</h1>
+  <p style="font-size:1.3rem; font-weight:600; margin-bottom:8px;">
+    {{ diseaseHeaderMap[detectedDiseaseName] || diseaseHeaderMap['default'] }}
+  </p>
+  <p style="margin-bottom:6px;">
+    <strong>Kondisi tanaman: </strong>
+    <span style="color:#f2ffad; font-weight:700">{{ detectedDiseaseName || 'Tidak Terdeteksi' }}</span>
+    <template v-if="userLocation">
+      &nbsp;|&nbsp;<strong>Wilayah: {{ userLocation }}</strong>
+    </template>
+  </p>
+  <p v-if="diseaseDescMap[detectedDiseaseName]" style="font-size:1.07rem; color:#fffedc;">
+    {{ diseaseDescMap[detectedDiseaseName] }}
+  </p>
+  <p v-else style="color:#f3ffe0;">
+    Dapatkan rekomendasi terbaik untuk kesehatan tanaman pepaya Anda, lengkap dengan info harga.
+  </p>
+</div>
+
 
     <div class="location-selector">
       <label for="location-select">Simulasikan Lokasi:</label>
@@ -69,67 +83,101 @@ const error = ref(''); // Pesan error jika ada masalah fetching data
 const allRekomendasiItemsMock = ref([
   {
     id: 1,
-    nama: "Pupuk Organik Kompos Super",
-    deskripsi: "Pupuk organik kaya nutrisi, cocok untuk meningkatkan kesuburan tanah dan ketahanan tanaman terhadap penyakit.",
-    harga_default: 75000,
+    nama: "Fungisida Propineb",
+    deskripsi: "Gunakan fungisida berbahan aktif Propineb untuk pengendalian penyakit Bercak Daun. Semprotkan sesuai dosis dan petunjuk kemasan.",
+    harga_default: 64000,
     harga_daerah: {
-      "Jawa Barat": 78000,
-      "Jawa Tengah": 73000,
-      "Jawa Timur": 76000,
-      "Sumatera": 85000,
-      "Kalimantan": 90000
+      "Jawa Barat": 65000,
+      "Jawa Tengah": 62000,
+      "Jawa Timur": 63000,
+      "Sumatera": 70000,
+      "Kalimantan": 72000
     },
-    untuk_penyakit: "Busuk Batang",
+    untuk_penyakit: "Bercak Daun"
   },
   {
     id: 2,
-    nama: "Fungisida Azoxystrobin",
-    deskripsi: "Fungisida sistemik untuk mengendalikan penyakit jamur, efektif terhadap penyakit Antraknosa.",
-    harga_default: 120000,
+    nama: "Fungisida Mancozeb",
+    deskripsi: "Fungisida sistemik dan kontak untuk pengendalian Hawar Daun. Semprotkan saat gejala awal muncul, ulangi 7-10 hari jika perlu.",
+    harga_default: 67000,
     harga_daerah: {
-      "Jawa Barat": 125000,
-      "Jawa Tengah": 118000,
-      "Jawa Timur": 122000,
-      "Sumatera": 135000,
-      "Kalimantan": 140000
+      "Jawa Barat": 69000,
+      "Jawa Tengah": 66000,
+      "Jawa Timur": 67000,
+      "Sumatera": 74000,
+      "Kalimantan": 76000
     },
-    untuk_penyakit: "Antraknosa",
+    untuk_penyakit: "Hawar Daun"
   },
   {
     id: 3,
-    nama: "Pupuk Daun NPK Cair",
-    deskripsi: "Pupuk daun lengkap untuk pertumbuhan vegetatif, membantu pemulihan dari kekurangan nutrisi akibat Cercospora.",
-    harga_default: 50000,
+    nama: "Fungisida Triazol",
+    deskripsi: "Untuk pengendalian Karat Daun pada pepaya. Gunakan fungisida dengan bahan aktif triazol secara berkala saat cuaca lembab.",
+    harga_default: 82000,
     harga_daerah: {
-      "Jawa Barat": 52000,
-      "Jawa Tengah": 48000,
-      "Jawa Timur": 51000,
-      "Sumatera": 58000,
-      "Kalimantan": 60000
+      "Jawa Barat": 83000,
+      "Jawa Tengah": 80000,
+      "Jawa Timur": 81000,
+      "Sumatera": 87000,
+      "Kalimantan": 90000
     },
-    untuk_penyakit: "Cercospora",
+    untuk_penyakit: "Karat Daun"
   },
   {
     id: 4,
-    nama: "Perawatan Rutin & Pemantauan",
-    deskripsi: "Tanaman Anda dalam kondisi sehat. Lanjutkan perawatan rutin, jaga kebersihan lingkungan, dan pantau terus kondisi daun.",
-    harga_default: 0,
-    harga_daerah: {},
-    untuk_penyakit: "Sehat",
+    nama: "Fungisida Tembaga & Perbaikan Drainase",
+    deskripsi: "Atasi Busuk Batang dengan fungisida tembaga dan perbaiki drainase. Potong bagian batang yang busuk dan bakar.",
+    harga_default: 88000,
+    harga_daerah: {
+      "Jawa Barat": 90000,
+      "Jawa Tengah": 85000,
+      "Jawa Timur": 88000,
+      "Sumatera": 95000,
+      "Kalimantan": 97000
+    },
+    untuk_penyakit: "Busuk Batang"
   },
   {
     id: 5,
-    nama: "Konsultasi Ahli Pertanian",
-    deskripsi: "Untuk kondisi yang tidak terdeteksi atau kompleks, disarankan berkonsultasi dengan ahli pertanian lokal.",
+    nama: "Perawatan Rutin & Pemantauan",
+    deskripsi: "Tanaman Anda sehat! Lanjutkan pemupukan, penyiraman, dan pengamatan secara berkala untuk menjaga kesehatan tanaman.",
     harga_default: 0,
     harga_daerah: {},
-    untuk_penyakit: "Tidak Terdeteksi",
+    untuk_penyakit: "Sehat"
+  },
+  {
+    id: 6,
+    nama: "Konsultasi Ahli Pertanian",
+    deskripsi: "Jika kondisi tanaman tidak terdeteksi atau kompleks, konsultasikan ke penyuluh atau ahli pertanian setempat.",
+    harga_default: 0,
+    harga_daerah: {},
+    untuk_penyakit: "Tidak Terdeteksi"
   }
 ]);
+
 // --- END: DATA MOCK ---
 
 const rekomendasiItems = ref([]);
 const detectedDiseaseName = ref('');
+// Judul kondisi berdasarkan penyakit
+const diseaseHeaderMap = {
+  "Bercak Daun": "Tanaman terkena Bercak Daun, segera lakukan pengendalian!",
+  "Hawar Daun": "Hawar Daun terdeteksi, lakukan penanganan secepatnya.",
+  "Karat Daun": "Tanaman terkena Karat Daun, berikut solusinya.",
+  "Busuk Batang": "Busuk Batang terdeteksi, lakukan tindakan pencegahan!",
+  "Sehat": "Tanaman Anda sehat, lanjutkan perawatan terbaik.",
+  "Tidak Terdeteksi": "Belum ada gejala penyakit yang terdeteksi.",
+  "default": "Dapatkan rekomendasi terbaik untuk kondisi pepaya Anda."
+};
+const diseaseDescMap = {
+  "Bercak Daun": "Pilih fungisida sesuai rekomendasi dan lakukan pemangkasan daun terinfeksi.",
+  "Hawar Daun": "Semprotkan fungisida dan hindari penyiraman daun secara langsung.",
+  "Karat Daun": "Gunakan fungisida triazol dan buang daun yang parah.",
+  "Busuk Batang": "Jaga drainase, potong bagian busuk, dan gunakan fungisida tembaga.",
+  "Sehat": "Teruskan pola perawatan, pemupukan, dan monitoring rutin.",
+  "Tidak Terdeteksi": "Jika ada gejala baru, lakukan deteksi ulang atau konsultasi ahli.",
+  "default": ""
+};
 
 // Fungsi utama untuk memfilter/mengambil rekomendasi
 // NANTINYA: Fungsi ini akan memanggil API Backend
@@ -140,62 +188,31 @@ const fetchRekomendasi = async () => {
   const disease = route.query.disease;
   detectedDiseaseName.value = disease || 'Tidak Terdeteksi';
 
-  // --- PENTING: Perbarui userLocation agar tampilan header ikut berubah ---
   userLocation.value = selectedLocation.value; 
 
-  // --- START: LOGIKA PENGGUNAAN DATA MOCK (AKAN DIGANTI DENGAN AXIOS.GET DARI BACKEND) ---
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulasi loading
+  await new Promise(resolve => setTimeout(resolve, 350)); // Simulasi loading
 
+  // FILTER UTAMA
   if (disease) {
     const filtered = allRekomendasiItemsMock.value.filter(item =>
-      item.untuk_penyakit && item.untuk_penyakit.toLowerCase() === disease.toLowerCase()
+      item.untuk_penyakit.toLowerCase() === disease.toLowerCase()
     );
-    if (filtered.length === 0) {
-      if (disease.toLowerCase() === 'sehat' || disease.toLowerCase() === 'healthy') {
-        rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Sehat');
-      } else {
-        rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Tidak Terdeteksi');
-      }
-    } else {
+    if (filtered.length > 0) {
       rekomendasiItems.value = filtered;
+    } else if (disease.toLowerCase() === 'sehat') {
+      rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Sehat');
+    } else {
+      // Penyakit tidak dikenal atau deteksi gagal
+      rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Tidak Terdeteksi');
     }
   } else {
+    // Default: tidak terdeteksi
     rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Tidak Terdeteksi');
   }
-  // --- END: LOGIKA PENGGUNAAN DATA MOCK ---
-
-  // --- START: BAGAIMANA NANTINYA KETIKA MENGGUNAKAN BACKEND ---
-  /*
-  import axios from 'axios'; // Pastikan axios diimpor di bagian atas <script setup>
-  const apiUrl = 'http://localhost:5000'; // Sesuaikan dengan URL backend kamu
-
-  try {
-    // 1. Dapatkan lokasi pengguna yang akurat (jika belum ada)
-    //    Ini bisa dilakukan sekali saat aplikasi dimuat atau per halaman.
-    //    Misal: kamu punya fungsi `getActualUserLocation()` yang mengembalikan nama daerah.
-    //    const actualUserRegion = await getActualUserLocation(); 
-    //    userLocation.value = actualUserRegion; // Update UI dengan lokasi asli
-    //    const locationToSendToBackend = actualUserRegion; 
-
-    // 2. Lakukan request ke backend untuk mendapatkan rekomendasi berdasarkan penyakit dan lokasi
-    //    Ganti `selectedLocation.value` dengan `locationToSendToBackend` jika sudah menggunakan Geolocation
-    const response = await axios.get(`${apiUrl}/api/rekomendasi`, {
-      params: {
-        disease: detectedDiseaseName.value,
-        location: selectedLocation.value // Saat ini masih pakai selectedLocation dari dropdown
-      }
-    });
-    rekomendasiItems.value = response.data; // Backend akan mengembalikan data yang sudah difilter dan diatur harganya
-  } catch (err) {
-    console.error("Error fetching recommendations:", err);
-    error.value = 'Gagal memuat rekomendasi. Coba lagi nanti.';
-    rekomendasiItems.value = []; // Kosongkan rekomendasi jika ada error
-  }
-  */
-  // --- END: BAGAIMANA NANTINYA KETIKA MENGGUNAKAN BACKEND ---
 
   loading.value = false;
 };
+
 
 // Lifecycle hook: Panggil fetchRekomendasi saat komponen dimuat pertama kali
 onMounted(() => {
@@ -228,19 +245,21 @@ const formatRupiah = (angka) => {
 // Fungsi untuk memberikan warna pada tag penyakit berdasarkan jenis penyakit
 const getPurposeColor = (penyakit) => {
   switch (penyakit.toLowerCase()) {
+    case 'bercak daun':
+      return '#23b05c';
+    case 'hawar daun':
+      return '#ff993a';
+    case 'karat daun':
+      return '#a162ef';
     case 'busuk batang':
-      return '#DC3545';
-    case 'antraknosa':
-      return '#FFC107';
-    case 'cercospora':
-      return '#17A2B8';
+      return '#de4040';
     case 'sehat':
-    case 'healthy':
       return '#28a745';
     default:
-      return '#6C757D';
+      return '#6C757D'; // Tidak terdeteksi
   }
 };
+
 </script>
 
 <style scoped>
@@ -323,10 +342,13 @@ const getPurposeColor = (penyakit) => {
 }
 
 
-.rekomendasi-list {
+/* .rekomendasi-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 25px;
+} */
+.rekomendasi-list {
+  margin-top: 18px;
 }
 
 .no-data {
