@@ -20,7 +20,7 @@ const server = http.createServer(app);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/lahan', lahanRouter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/api', diseasesRouter);
+app.use('/api/deteksi', diseasesRouter);
 app.use('/model', express.static(path.join(__dirname, 'public/model')));
 app.use('/api/prediksi', prediksiRoutes);
 
