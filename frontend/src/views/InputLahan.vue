@@ -25,13 +25,12 @@
   </form>
 </template>
 
-
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import axios from 'axios'
-import Swal from 'sweetalert2'; // <-- TAMBAHKAN BARIS INI
-import { useRouter } from 'vue-router';
+import Swal from 'sweetalert2'
 
 const nama = ref('')
 const latitude = ref('')
@@ -39,7 +38,7 @@ const longitude = ref('')
 const foto = ref(null)
 const preview = ref('')
 const error = ref('')
-const router = useRouter();
+const router = useRouter()
 
 const onFileChange = (e) => {
   foto.value = e.target.files[0]
@@ -47,21 +46,18 @@ const onFileChange = (e) => {
 }
 
 onMounted(() => {
-  // Koordinat Blotongan, Salatiga
   const blotongan = { lat: -7.323768, lng: 110.501556 };
   const map = L.map('map').setView([blotongan.lat, blotongan.lng], 15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
-  // Tambahkan marker default untuk Blotongan
   let marker = L.marker([blotongan.lat, blotongan.lng]).addTo(map);
   marker.bindPopup("Blotongan, Salatiga").openPopup();
 
   latitude.value = blotongan.lat;
   longitude.value = blotongan.lng;
 
-  // Saat klik map, pindahkan marker dan update koordinat
   map.on('click', function(e) {
     latitude.value = e.latlng.lat;
     longitude.value = e.latlng.lng;
@@ -70,9 +66,8 @@ onMounted(() => {
   });
 });
 
-
-
 const submitLahan = async () => {
+  error.value = ''
   try {
     const formData = new FormData()
     formData.append('nama', nama.value)
@@ -81,8 +76,8 @@ const submitLahan = async () => {
     formData.append('foto', foto.value)
 
     const token = localStorage.getItem('token')
-    await axios.post(
-      'http://localhost:5000/api/lahan',
+    const response = await axios.post(
+      'https://backend-papaya-production.up.railway.app/api/lahan',
       formData,
       {
         headers: {
@@ -91,12 +86,15 @@ const submitLahan = async () => {
         }
       }
     )
+
+
     nama.value = ''
     latitude.value = ''
     longitude.value = ''
     foto.value = null
     preview.value = ''
-    error.value = ''
+
+
     Swal.fire({
       icon: 'success',
       title: 'Lahan berhasil ditambahkan!',
@@ -108,11 +106,12 @@ const submitLahan = async () => {
       }
     })
   } catch (e) {
-    console.error("Error submitting lahan:", e);
+    console.error('Error submit lahan:', e)
     error.value = e.response?.data?.error || 'Gagal input lahan'
   }
 }
 </script>
+
 
 <style scoped>
 form {
