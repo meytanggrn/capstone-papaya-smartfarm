@@ -58,7 +58,7 @@ const login = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await axios.post('http://localhost:5000/api/auth/login', {
+    const response = await axios.post('https://backend-papaya-production.up.railway.app/api/auth/login', {
       email: email.value,
       password: password.value
     })

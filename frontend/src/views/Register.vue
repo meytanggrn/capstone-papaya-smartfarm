@@ -4,7 +4,7 @@
       <div class="register-left">
         <h1 class="register-title">Daftar Akun</h1>
         <p class="register-desc">
-          Tingkatkan Produktivitas, Optimalkan Hasil Panen<br>
+          Tingkatkan Produktivitas, Optimalkan Hasil Panen<br />
           dengan <span class="brand">Papaya Smartfarm</span>.
         </p>
         <form @submit.prevent="register" class="register-form">
@@ -12,19 +12,19 @@
           <input v-model="email" type="email" placeholder="Email" class="input" required />
           <input v-model="password" type="password" placeholder="Password" class="input" required />
           <button type="submit" class="btn-register" :disabled="loading">
-            {{ loading ? 'Menyimpan data' : 'Daftar Akun' }}
+            {{ loading ? 'Menyimpan data...' : 'Daftar Akun' }}
           </button>
         </form>
         <div class="register-bottom">
-          Sudah memiliki akun? <router-link to="/Login">Login</router-link>
+          Sudah memiliki akun? <router-link to="/login">Login</router-link>
         </div>
         <div v-if="error" class="register-error">{{ error }}</div>
-        <div v-if="successMessage" class="register-success">{{ successMessage }}</div>
       </div>
       <div class="register-right">
         <img src="/assets/login-img.png" alt="Papaya Smartfarm" class="illustration" />
         <div class="right-desc">
-          <span class="brand">Papaya Smartfarm</span> <br> Pertanian Presisi di Genggaman Anda. 
+          <span class="brand">Papaya Smartfarm</span> <br />
+          Pertanian Presisi di Genggaman Anda.
         </div>
       </div>
     </div>
@@ -41,14 +41,14 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 const error = ref('')
-const successMessage = ref('') // Tambahkan variabel untuk pesan sukses
 const loading = ref(false)
 const router = useRouter()
+const apiUrl = 'https://backend-papaya-production.up.railway.app' 
 
 const register = async () => {
   loading.value = true
   error.value = ''
-  successMessage.value = '' // Reset pesan sukses juga
+
   Swal.fire({
     title: 'Processing...',
     html: 'Registering your account...',
@@ -61,60 +61,47 @@ const register = async () => {
   })
 
   try {
-    console.log('Registering with:', { name: name.value, email: email.value, password: password.value })
-    
-    // Permintaan registrasi
-    const response = await axios.post('http://localhost:5000/api/auth/register', {
+    // Register akun
+    await axios.post(`${apiUrl}/api/auth/register`, {
       name: name.value,
       email: email.value,
       password: password.value
     })
 
-    // Jika registrasi berhasil (backend mengembalikan status 201 Created)
-    Swal.close() // Tutup SweetAlert 'Processing...'
-    successMessage.value = 'Registrasi berhasil! Silakan login.' // Set pesan sukses
+    // Login otomatis setelah register
+    const loginRes = await axios.post(`${apiUrl}/api/auth/login`, {
+      email: email.value,
+      password: password.value
+    })
+
+    // Simpan token dan user ke localStorage
+    localStorage.setItem('token', loginRes.data.token)
+    localStorage.setItem('user', JSON.stringify(loginRes.data.user))
+    window.dispatchEvent(new Event('token-updated'))
+
     Swal.fire({
       icon: 'success',
       title: 'Registrasi Berhasil!',
-      text: 'Sekarang Anda bisa login dengan akun Anda.',
+      text: 'Selamat datang di Papaya Smartfarm!',
       showConfirmButton: false,
-      timer: 2000, // Tampilkan sebentar pesan sukses
+      timer: 1600,
       timerProgressBar: true,
-      didClose: () => {
-        router.push('/Login') // Arahkan ke halaman Login
+      willClose: () => {
+        router.push('/dashboard')
       }
     })
-
-    // Hapus baris auto login yang menyebabkan error
-    // localStorage.setItem('token', loginRes.data.token)
-    // localStorage.setItem('user', JSON.stringify(loginRes.data.user))
-    // window.dispatchEvent(new Event('token-updated'))
-
   } catch (e) {
     Swal.close()
-    console.error("Error during registration:", e); // Log error lebih detail
-    error.value = e.response?.data?.error || 'Gagal register. Mohon coba lagi.'
+    console.error('Register Error:', e)
+    error.value = e.response?.data?.error || 'Gagal register'
   } finally {
     loading.value = false
   }
 }
-
 </script>
 
-<style scoped>
-/* Pastikan Anda menambahkan style untuk .register-success di sini */
-.register-success {
-  color: #10B981; /* Warna hijau */
-  background: #eafaea; /* Background hijau muda */
-  border-radius: 7px;
-  padding: 9px 14px;
-  margin-top: 14px;
-  text-align: center;
-  font-size: 0.98rem;
-  border: 1px solid #c2f0d4;
-}
 
-/* Pertahankan semua style lainnya seperti semula */
+<style scoped>
 .register-wrapper {
   min-height: 100vh;
   display: flex;
@@ -313,3 +300,4 @@ const register = async () => {
   }
 }
 </style>
+

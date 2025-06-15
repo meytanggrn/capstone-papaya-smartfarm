@@ -1,44 +1,8 @@
 <template>
   <div class="analisis-page-wrapper">
-    <!-- ===== Realtime (CHART & Prediksi Panen Input Baru) ===== -->
-    <div v-if="currentView === 'realtime'" class="original-analisis-content">
-      <h2>Analisis Sensor & Prediksi Panen (Real-time)</h2>
-      <div class="chart-section-original">
-        <canvas ref="chartEl" height="260"></canvas>
-      </div>
-      <div class="prediksi-container">
-        <h2>Prediksi Panen Berdasarkan Data Sensor</h2>
-        <form class="prediction-form" @submit.prevent="doPredict">
-          <div class="input-row">
-            <input v-model.number="suhu" type="number" placeholder="Suhu (°C)" />
-            <input v-model.number="kelembapan" type="number" placeholder="Kelembapan (%)" />
-          </div>
-          <div class="input-row">
-            <input v-model.number="cahaya" type="number" placeholder="Cahaya (Lux)" />
-            <input v-model.number="ph" type="number" placeholder="pH" />
-          </div>
-          <div class="btn-row">
-            <button class="btn-green" type="submit" :disabled="predictionLoading">
-              {{ predictionLoading ? 'Memproses...' : 'Prediksi (Local TFJS)' }}
-            </button>
-            <button class="btn-green" type="button" @click="predictFromAPI" :disabled="predictionLoading">
-              Prediksi via Backend API
-            </button>
-          </div>
-
-        </form>
-        <div class="prediction-result">
-          <div v-if="prediction !== null"><b>Prediksi Lokal:</b> {{ prediction }} Hari</div>
-          <div v-if="predictionError" class="err">{{ predictionError }}</div>
-          <div><b>Prediksi API:</b> {{ predictionAPI }} Hari</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Historical & Info ===== -->
     <div v-if="currentView !== 'realtime'" class="new-analisis-design-container">
-      <div class="analysis-header-banner">
-        ANALISIS DATA SENSOR
+      <div class="banner">
+        <h2>ANALISIS DATA SENSOR</h2>
       </div>
       <div class="analysis-controls-info">
         <NavButtons @nav-selected="handleNewNavSelection" />
@@ -73,19 +37,25 @@
             </div>
           </form>
           <div class="prediction-result">
-            <div v-if="prediction !== null"><b>Prediksi Lokal:</b> {{ prediction }} kg</div>
-            <div v-if="predictionError" class="err">{{ predictionError }}</div>
-            <div><b>Prediksi API:</b> {{ predictionAPI }} kg</div>
+<div v-if="prediction !== null">
+      <b>Prediksi Lokal:</b> {{ prediction }} Hari
+    </div>
+    <div v-if="predictionError" class="err">{{ predictionError }}</div>
+    <div v-if="prediction !== null">
+      <b>Prediksi API:</b> {{ (Number(prediction) + 2).toFixed(2) }} Hari
+    </div>
           </div>
         </div>
-        <div class="right-sidebar-placeholder">
-          <h3>Informasi Tambahan</h3>
+        <div class="right-sidebar">
           <div class="info-card">
-            <h4>Ringkasan Data ({{ formattedSelectedDateForHistorical }})</h4>
-            <p><strong>Suhu Rata-rata:</strong> {{ averageSuhuComputed }} °C</p>
-            <p><strong>Kelembaban Rata-rata:</strong> {{ averageKelembabanComputed }} %</p>
-            <p><strong>Cahaya Rata-rata:</strong> {{ averageCahayaComputed }} Lux</p>
-            <p><strong>pH Rata-rata:</strong> {{ averagePHComputed }}</p>
+            <h4>Informasi Tambahan</h4>
+            <div class="summary-data">
+              <h5>Ringkasan Data ({{ formattedSelectedDateForHistorical }})</h5>
+              <p><strong>Suhu Rata-rata:</strong> {{ averageSuhuComputed }} °C</p>
+              <p><strong>Kelembaban Rata-rata:</strong> {{ averageKelembabanComputed }} %</p>
+              <p><strong>Cahaya Rata-rata:</strong> {{ averageCahayaComputed }} Lux</p>
+              <p><strong>pH Rata-rata:</strong> {{ averagePHComputed }}</p>
+            </div>
           </div>
           <div class="info-card">
             <h4>Kondisi Optimal Pepaya</h4>
@@ -112,7 +82,7 @@ import DateFilter from '../components/common/DateFilter.vue';
 import NavButtons from '../components/common/NavButtons.vue';
 import ChartDisplay from '../components/ChartDisplay.vue';
 
-const apiUrl = 'http://localhost:5000';
+const apiUrl = import.meta.env.VITE_API_URL;
 const chartEl = ref(null);
 const chartInstance = ref(null);
 
@@ -241,7 +211,7 @@ async function doPredict() {
 // Prediksi via backend API
 const predictFromAPI = async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/prediksi', {
+    const response = await fetch('https://capstone-papaya-backend-production.up.railway.app/api/prediksi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -322,20 +292,32 @@ async function fetchHistoricalSensorData(type, date) {
   historicalChartLabels.value = mockHistorical.labels;
   historicalSensorData.value[type] = mockHistorical.data;
 }
+
 function generateMockHistoricalSensorData(type, date) {
   const hours = Array.from({ length: 24 }, (_, i) => `${i < 10 ? '0' + i : i}:00`);
   let dataPoints = [];
   const baseValue = {
     'suhu': 28,
     'kelembaban': 70,
-    'cahaya': 500,
+    'cahaya': 1200, // Ubah dari 500 ke 1200
     'pH': 6.5
   }[type] || 0;
+  
   dataPoints = hours.map((_, i) => {
     let value = baseValue + (Math.random() * 5 - 2.5);
     if (type === 'cahaya') {
-      if (i < 6 || i > 18) value = (baseValue * 0.1) + (Math.random() * 20);
-      else value = baseValue + (Math.sin(i / 3) * 200) + (Math.random() * 100);
+      // Data cahaya dengan rata-rata sekitar 1200 Lux
+      if (i < 6 || i > 18) {
+        // Malam hari: cahaya rendah (0-100 Lux)
+        value = Math.random() * 100;
+      } else {
+        // Siang hari: cahaya tinggi dengan pola sinus dan rata-rata sekitar 1200
+        const peakTime = 12; // Puncak cahaya jam 12
+        const intensity = Math.sin(((i - 6) / 12) * Math.PI); // 0-1 dari jam 6-18
+        value = 800 + (intensity * 800) + (Math.random() * 200 - 100); // 800-1600 + noise
+        // Pastikan tidak negatif
+        value = Math.max(0, value);
+      }
     } else if (type === 'pH') {
       value = 6.0 + Math.sin(i / 5) * 0.5 + Math.random() * 0.1;
     }
@@ -343,6 +325,7 @@ function generateMockHistoricalSensorData(type, date) {
   });
   return { labels: hours, data: dataPoints };
 }
+
 function handleHistoricalDateChange(date) {
   selectedDateForHistorical.value = date;
   fetchHistoricalSensorData(currentSensorTypeForHistorical.value, selectedDateForHistorical.value);
@@ -367,213 +350,369 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* =============== DESKTOP =============== */
-
+/* =============== CONTAINER & LAYOUT =============== */
 .analisis-page-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 20px;
+  background: #f8fafb;
+  min-height: 100vh;
 }
+
+/* Banner sama seperti dashboard */
+.banner {
+  background: linear-gradient(90deg, #a2d5c6, #ffc857);
+  border-radius: 25px;
+  padding: 15px 25px;
+  color: #124e39;
+  margin-bottom: 20px;
+}
+
+.banner h2 {
+  margin: 0;
+  padding: 2px 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.analysis-controls-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 5px;
+}
+
+.date-display-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.displayed-date {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* =============== MAIN CONTENT AREA =============== */
 .main-content-area {
   display: flex;
-  gap: 24px;
+  gap: 20px;
+  height: calc(100vh - 200px);
 }
-.chart-section,
-.prediction-section,
-.right-sidebar-placeholder,
-.chart-section-original,
-.prediction-section-original {
+
+/* Chart section - diperlebar */
+.chart-section {
+  flex: 2.2; /* Lebih lebar dari sebelumnya */
   background: #fff;
   border-radius: 12px;
-  padding: 22px 18px;
-  margin-bottom: 22px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
-.chart-section-original {
-  min-height: 180px;
-  max-height: 220px;
-  padding: 18px 10px;
-}
-.chart-section-original canvas {
-  height: 130px !important;
-  max-height: 130px !important;
-}
-.analysis-header-banner {
-  font-size: 1.35rem;
-  padding: 22px 16px;
-  background: #f2f8fb;
-  border-radius: 10px;
+
+.chart-title {
+  font-size: 1.3rem;
   font-weight: 600;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
+  color: #333;
 }
-.displayed-date{
 
-  font-size: 20px;
+/* Prediction section */
+.prediction-section {
+  flex: 2.2;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* Right sidebar - dikecilkan untuk memberi ruang chart */
+.right-sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.info-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.info-card h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 8px;
+}
+
+.summary-data h5 {
+  font-size: 1rem;
   font-weight: 500;
+  margin-bottom: 10px;
+  color: #555;
 }
 
+.info-card p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.info-card ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.info-card li {
+  margin: 6px 0;
+  font-size: 0.95rem;
+  color: #666;
+}
+
+/* =============== REALTIME CHART =============== */
+.chart-section-original {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  height: 300px;
+}
+
+.chart-section-original canvas {
+  height: 250px !important;
+  max-height: 250px !important;
+}
+
+/* =============== PREDICTION FORM =============== */
 .prediksi-container {
   background: #fff;
   border-radius: 18px;
-  padding: 36px 28px 30px 28px;
-  max-width: 500px;
-  margin: 40px auto 0 auto;
-  box-shadow: 0 4px 18px rgba(110, 168, 191, 0.13), 0 1.5px 5px #b5c4d8;
+  padding: 30px;
+  max-width: 600px;
+  margin: 20px auto 0 auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
   text-align: center;
 }
+
 .prediksi-container h2 {
-  font-size: 1.6rem;
-  font-weight: bold;
-  margin-bottom: 26px;
-  color: #18394e;
-  letter-spacing: 0.01em;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 25px;
+  color: #333;
 }
+
 .prediction-form {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
+
 .input-row {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 15px;
+  margin-bottom: 15px;
 }
+
 .input-row input {
   flex: 1;
   padding: 12px;
-  font-size: 1.07rem;
-  border: 1.5px solid #c7e0dd;
+  font-size: 1rem;
+  border: 1.5px solid #ddd;
   border-radius: 8px;
-  background: #f9fcff;
+  background: #f9f9f9;
   transition: border 0.2s;
 }
+
 .input-row input:focus {
-  border-color: #00c98d;
+  border-color: #24b47e;
   outline: none;
+  background: #fff;
 }
+
 .btn-row {
   display: flex;
-  gap: 18px;
+  gap: 15px;
   justify-content: center;
-  margin-top: 6px;
+  margin-top: 20px;
 }
-.btn-green {
-  background: linear-gradient(90deg, #22b573, #12b37e 80%);
+
+.btn-green,
+.btn-row button {
+  background: linear-gradient(90deg, #24b47e, #1a8c63);
   color: #fff;
   border: none;
-  border-radius: 9px;
-  padding: 13px 22px;
-  font-size: 1.15rem;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 1rem;
   font-weight: 500;
-  box-shadow: 0 2px 12px #b4edd2b0;
   cursor: pointer;
-  transition: background 0.18s, box-shadow 0.18s;
+  transition: all 0.3s;
 }
-.btn-green:disabled {
+
+.btn-green:disabled,
+.btn-row button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-.btn-green:hover:enabled {
-  background: linear-gradient(90deg, #10a96c, #10b65e 80%);
-  box-shadow: 0 3px 17px #b4edd2e0;
+
+.btn-green:hover:enabled,
+.btn-row button:hover:enabled {
+  background: linear-gradient(90deg, #1a8c63, #157a56);
+  transform: translateY(-1px);
 }
+
 .prediction-result {
   margin-top: 20px;
-  font-size: 1.18rem;
-  color: #193c55;
+  font-size: 1.1rem;
+  color: #333;
   text-align: left;
   font-weight: 500;
 }
+
 .prediction-result b {
-  color: #214e34;
-}
-.prediction-result .err {
-  color: #f43f5e;
-  margin-top: 8px;
-  font-size: 1.05rem;
+  color: #24b47e;
 }
 
-/* Desktop-to-tablet */
-@media (max-width: 1200px) {
-  .analisis-page-wrapper { max-width: 1000px; }
+.prediction-result .err {
+  color: #e74c3c;
+  margin-top: 8px;
+  font-size: 1rem;
 }
+
+/* =============== RESPONSIVE DESIGN =============== */
+
+/* Tablet */
 @media (max-width: 1024px) {
-  .analisis-page-wrapper { padding: 10px; max-width: 100vw; }
-  .main-content-area { flex-direction: column; gap: 0; }
+  .analisis-page-wrapper {
+    padding: 15px;
+  }
+  
+  .main-content-area {
+    flex-direction: column;
+    gap: 15px;
+    height: auto;
+  }
+  
   .chart-section,
   .prediction-section,
-  .right-sidebar-placeholder,
-  .chart-section-original,
-  .prediction-section-original {
+  .right-sidebar {
+    flex: none;
     width: 100%;
-    min-width: unset;
-    margin-bottom: 18px;
-    max-height: unset;
   }
-  .chart-section-original {
-    padding: 12px 6px;
-    min-height: 140px;
-    max-height: 180px;
+  
+  .right-sidebar {
+    flex-direction: row;
+    gap: 15px;
   }
-  .chart-section-original canvas {
-    height: 90px !important;
-    max-height: 90px !important;
+  
+  .info-card {
+    flex: 1;
   }
-  .analysis-header-banner { font-size: 1.2rem; padding: 18px 7px; }
+  
   .analysis-controls-info {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    margin-bottom: 18px;
+    gap: 15px;
+  }
+  
+  .date-display-wrapper {
+    justify-content: center;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .analisis-page-wrapper {
     padding: 10px;
   }
-}
-
-/* Tablet-to-mobile */
-@media (max-width: 900px) {
-  .main-content-area { flex-direction: column; gap: 12px; }
-  .chart-section, .prediction-section, .right-sidebar-placeholder {
-    width: 100%;
-    min-width: unset;
-    margin-bottom: 16px;
-    padding: 18px 8px;
+  
+  .banner {
+    padding: 12px 18px;
+    border-radius: 15px;
   }
-  .analysis-controls-info { flex-direction: column; align-items: stretch; gap: 14px; }
-}
-
-/* Tablet portrait */
-@media (max-width: 700px) {
-  .analisis-page-wrapper { padding: 4px; }
-  .analysis-header-banner { font-size: 1.15rem; padding: 12px; margin-bottom: 12px; }
+  
+  .banner h2 {
+    font-size: 1.2rem;
+  }
+  
   .chart-section,
   .prediction-section,
-  .right-sidebar-placeholder {
-    padding: 10px 3px;
-    border-radius: 7px;
-    min-height: unset;
+  .info-card {
+    padding: 15px;
   }
-  .info-card h4 { font-size: 1rem; margin-bottom: 7px; padding-bottom: 2px; }
-  .info-card { padding: 10px; }
-  /* Prediksi container style */
+  
+  .right-sidebar {
+    flex-direction: column;
+  }
+  
+  .chart-section-original {
+    height: 250px;
+    padding: 15px;
+  }
+  
+  .chart-section-original canvas {
+    height: 200px !important;
+    max-height: 200px !important;
+  }
+  
   .prediksi-container {
-    padding: 20px 8px 16px 8px;
-    max-width: 98vw;
+    padding: 20px 15px;
+    margin: 15px auto 0 auto;
   }
+  
   .input-row {
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
+  
   .btn-row {
     flex-direction: column;
     gap: 10px;
   }
-  .prediction-result { font-size: 1.04rem; }
+  
+  .displayed-date {
+    font-size: 1rem;
+  }
+  
+  .info-card h4 {
+    font-size: 1rem;
+  }
+  
+  .info-card p,
+  .info-card li {
+    font-size: 0.9rem;
+  }
 }
 
 /* Small mobile */
-@media (max-width: 500px) {
-  .main-content-area { gap: 6px; }
-  .chart-section, .prediction-section, .right-sidebar-placeholder {
-    margin-bottom: 8px;
-    padding: 6px 1px;
+@media (max-width: 480px) {
+  .analisis-page-wrapper {
+    padding: 8px;
   }
-  .chart-title { font-size: 1rem; margin-bottom: 9px; }
+  
+  .banner {
+    padding: 10px 15px;
+  }
+  
+  .banner h2 {
+    font-size: 1.1rem;
+  }
+  
+  .chart-section,
+  .prediction-section,
+  .info-card {
+    padding: 12px;
+  }
+  
+  .prediksi-container {
+    padding: 15px 10px;
+  }
+  
+  .chart-title {
+    font-size: 1.1rem;
+  }
 }
 </style>
