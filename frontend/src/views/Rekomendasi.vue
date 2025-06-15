@@ -1,455 +1,1077 @@
 <template>
   <div class="rekomendasi-page-container">
-<div class="header-section">
-  <h1>Rekomendasi Pupuk & Obat</h1>
-  <p style="font-size:1.3rem; font-weight:600; margin-bottom:8px;">
-    {{ diseaseHeaderMap[detectedDiseaseName] || diseaseHeaderMap['default'] }}
-  </p>
-  <p style="margin-bottom:6px;">
-    <strong>Kondisi tanaman: </strong>
-    <span style="color:#f2ffad; font-weight:700">{{ detectedDiseaseName || 'Tidak Terdeteksi' }}</span>
-    <template v-if="userLocation">
-      &nbsp;|&nbsp;<strong>Wilayah: {{ userLocation }}</strong>
-    </template>
-  </p>
-  <p v-if="diseaseDescMap[detectedDiseaseName]" style="font-size:1.07rem; color:#fffedc;">
-    {{ diseaseDescMap[detectedDiseaseName] }}
-  </p>
-  <p v-else style="color:#f3ffe0;">
-    Dapatkan rekomendasi terbaik untuk kesehatan tanaman pepaya Anda, lengkap dengan info harga.
-  </p>
-</div>
-
-
-    <div class="location-selector">
-      <label for="location-select">Simulasikan Lokasi:</label>
-      <select id="location-select" v-model="selectedLocation">
-        <option value="Jawa Barat">Jawa Barat</option>
-        <option value="Jawa Tengah">Jawa Tengah</option>
-        <option value="Jawa Timur">Jawa Timur</option>
-        <option value="Sumatera">Sumatera</option>
-        <option value="Kalimantan">Kalimantan</option>
-      </select>
+    <div class="header-section">
+      <h1>🌿 Rekomendasi Penanganan Tanaman</h1>
+      <p style="font-size:1.3rem; font-weight:600; margin-bottom:8px;">
+        {{ getHeaderText() }}
+      </p>
+      <p style="margin-bottom:6px;">
+        <strong>Kondisi saat ini: </strong>
+        <span style="color:#f2ffad; font-weight:700">
+          {{ selectedDetection ? selectedDetection.className : 'Pilih hasil deteksi' }}
+        </span>
+        <template v-if="selectedDetection">
+          &nbsp;|&nbsp;<strong>Kepercayaan: {{ (selectedDetection.probability * 100).toFixed(1) }}%</strong>
+        </template>
+      </p>
+      <p style="font-size:1.07rem; color:#fffedc;">
+        {{ getDescriptionText() }}
+      </p>
     </div>
 
-    <div class="rekomendasi-list">
-      <div v-if="loading" class="loading-message">Memuat rekomendasi...</div>
-      <div v-else-if="error" class="error-message">{{ error }}</div>
-      
-      <div v-else>
-        <div v-if="rekomendasiItems.length === 0" class="no-data">
-          <p>Tidak ada rekomendasi spesifik untuk kondisi ini atau data belum tersedia.</p>
-          <p>Mohon pastikan deteksi penyakit telah dilakukan atau hubungi administrator.</p>
+    <!-- Detection History Selector -->
+    <div class="detection-selector">
+      <div class="selector-card">
+        <h3>📊 Pilih Hasil Deteksi</h3>
+        <div v-if="detectionHistory.length === 0" class="no-history">
+          <p>Belum ada riwayat deteksi penyakit.</p>
+          <router-link to="/deteksi/scan" class="scan-link">
+            📸 Lakukan Deteksi Sekarang
+          </router-link>
         </div>
+        
+        <div v-else class="history-dropdown">
+          <label for="detection-select">Pilih riwayat deteksi:</label>
+          <select id="detection-select" v-model="selectedDetectionIndex" @change="updateRecommendations">
+            <option value="" disabled>-- Pilih hasil deteksi --</option>
+            <option 
+              v-for="(detection, index) in detectionHistory" 
+              :key="index" 
+              :value="index"
+            >
+              {{ detection.className }} - {{ formatTime(detection.timestamp) }} 
+              ({{ (detection.probability * 100).toFixed(1) }}%)
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
 
-        <div v-for="item in rekomendasiItems" :key="item.id" class="rekomendasi-card">
+    <!-- Recommendations List -->
+    <div class="rekomendasi-list">
+      <div v-if="loading" class="loading-message">
+        <div class="loading-spinner"></div>
+        Memuat rekomendasi...
+      </div>
+      
+      <div v-else-if="!selectedDetection" class="no-selection">
+        <div class="no-selection-card">
+          <div class="no-selection-icon">🔍</div>
+          <h3>Pilih Hasil Deteksi</h3>
+          <p>Silakan pilih salah satu hasil deteksi dari dropdown di atas untuk melihat rekomendasi penanganan yang sesuai.</p>
+        </div>
+      </div>
+
+      <div v-else class="recommendations-grid">
+        <div 
+          v-for="recommendation in currentRecommendations" 
+          :key="recommendation.id" 
+          class="rekomendasi-card"
+          :class="getCardClass(recommendation.type)"
+        >
           <div class="card-header">
-            <h2>{{ item.nama }}</h2>
-            <span class="purpose-tag" :style="{ backgroundColor: getPurposeColor(item.untuk_penyakit) }">{{ item.untuk_penyakit }}</span>
-          </div>
-          <p class="description">{{ item.deskripsi }}</p>
-          <div class="price-info">
-            <h3>Harga: <span>{{ formatRupiah(item.harga_daerah[selectedLocation] || item.harga_default) }}</span></h3>
+            <div class="card-title">
+              <span class="card-icon">{{ recommendation.icon }}</span>
+              <h2>{{ recommendation.title }}</h2>
             </div>
-          <div class="location-general-info">
-            <h4>Ketersediaan Umum:</h4>
-            <p>Tersedia di toko pertanian terdekat atau marketplace online.</p>
+            <span class="purpose-tag" :style="{ backgroundColor: getPurposeColor(selectedDetection.className) }">
+              {{ recommendation.category }}
+            </span>
+          </div>
+          
+          <div class="card-content">
+            <p class="description">{{ recommendation.description }}</p>
+            
+            <div v-if="recommendation.steps" class="steps-section">
+              <h4>📋 Langkah-langkah:</h4>
+              <ol class="steps-list">
+                <li v-for="step in recommendation.steps" :key="step">{{ step }}</li>
+              </ol>
+            </div>
+
+            <div v-if="recommendation.tips" class="tips-section">
+              <h4>💡 Tips Tambahan:</h4>
+              <ul class="tips-list">
+                <li v-for="tip in recommendation.tips" :key="tip">{{ tip }}</li>
+              </ul>
+            </div>
+
+            <div v-if="recommendation.warning" class="warning-section">
+              <h4>⚠️ Perhatian:</h4>
+              <p class="warning-text">{{ recommendation.warning }}</p>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div v-if="selectedDetection" class="quick-actions">
+      <h3>🚀 Aksi Cepat</h3>
+      <div class="action-buttons">
+        <button @click="exportRecommendations" class="action-btn export-btn">
+          📥 Export Rekomendasi
+        </button>
+        <button @click="shareRecommendations" class="action-btn share-btn">
+          📤 Bagikan
+        </button>
+        <router-link to="/deteksi/scan" class="action-btn scan-btn">
+          🔄 Deteksi Ulang
+        </router-link>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, onMounted, computed } from 'vue'
+import Swal from 'sweetalert2'
 
-const route = useRoute();
+// Reactive data
+const detectionHistory = ref([])
+const selectedDetectionIndex = ref('')
+const selectedDetection = ref(null)
+const currentRecommendations = ref([])
+const loading = ref(false)
 
-// --- START: BAGIAN YANG AKAN BERINTERAKSI DENGAN BACKEND NANTINYA ---
-// Variabel untuk menyimpan lokasi pengguna yang sebenarnya (atau disimulasikan)
-// NANTINYA: userLocation akan didapat dari hasil Geolocation API kemudian dikonversi oleh backend
-const userLocation = ref('Jawa Tengah'); // Default lokasi mock
-
-// Ini adalah variabel untuk dropdown simulasi lokasi, akan dihilangkan di produksi
-const selectedLocation = ref('Jawa Tengah'); // Default lokasi untuk selector
-
-const loading = ref(false); // Status loading untuk request ke backend
-const error = ref(''); // Pesan error jika ada masalah fetching data
-// --- END: BAGIAN YANG AKAN BERINTERAKSI DENGAN BACKEND NANTINYA ---
-
-// --- START: DATA MOCK (AKAN DIGANTI DENGAN FETCH DARI BACKEND) ---
-const allRekomendasiItemsMock = ref([
-  {
-    id: 1,
-    nama: "Fungisida Propineb",
-    deskripsi: "Gunakan fungisida berbahan aktif Propineb untuk pengendalian penyakit Bercak Daun. Semprotkan sesuai dosis dan petunjuk kemasan.",
-    harga_default: 64000,
-    harga_daerah: {
-      "Jawa Barat": 65000,
-      "Jawa Tengah": 62000,
-      "Jawa Timur": 63000,
-      "Sumatera": 70000,
-      "Kalimantan": 72000
-    },
-    untuk_penyakit: "Bercak Daun"
-  },
-  {
-    id: 2,
-    nama: "Fungisida Mancozeb",
-    deskripsi: "Fungisida sistemik dan kontak untuk pengendalian Hawar Daun. Semprotkan saat gejala awal muncul, ulangi 7-10 hari jika perlu.",
-    harga_default: 67000,
-    harga_daerah: {
-      "Jawa Barat": 69000,
-      "Jawa Tengah": 66000,
-      "Jawa Timur": 67000,
-      "Sumatera": 74000,
-      "Kalimantan": 76000
-    },
-    untuk_penyakit: "Hawar Daun"
-  },
-  {
-    id: 3,
-    nama: "Fungisida Triazol",
-    deskripsi: "Untuk pengendalian Karat Daun pada pepaya. Gunakan fungisida dengan bahan aktif triazol secara berkala saat cuaca lembab.",
-    harga_default: 82000,
-    harga_daerah: {
-      "Jawa Barat": 83000,
-      "Jawa Tengah": 80000,
-      "Jawa Timur": 81000,
-      "Sumatera": 87000,
-      "Kalimantan": 90000
-    },
-    untuk_penyakit: "Karat Daun"
-  },
-  {
-    id: 4,
-    nama: "Fungisida Tembaga & Perbaikan Drainase",
-    deskripsi: "Atasi Busuk Batang dengan fungisida tembaga dan perbaiki drainase. Potong bagian batang yang busuk dan bakar.",
-    harga_default: 88000,
-    harga_daerah: {
-      "Jawa Barat": 90000,
-      "Jawa Tengah": 85000,
-      "Jawa Timur": 88000,
-      "Sumatera": 95000,
-      "Kalimantan": 97000
-    },
-    untuk_penyakit: "Busuk Batang"
-  },
-  {
-    id: 5,
-    nama: "Perawatan Rutin & Pemantauan",
-    deskripsi: "Tanaman Anda sehat! Lanjutkan pemupukan, penyiraman, dan pengamatan secara berkala untuk menjaga kesehatan tanaman.",
-    harga_default: 0,
-    harga_daerah: {},
-    untuk_penyakit: "Sehat"
-  },
-  {
-    id: 6,
-    nama: "Konsultasi Ahli Pertanian",
-    deskripsi: "Jika kondisi tanaman tidak terdeteksi atau kompleks, konsultasikan ke penyuluh atau ahli pertanian setempat.",
-    harga_default: 0,
-    harga_daerah: {},
-    untuk_penyakit: "Tidak Terdeteksi"
-  }
-]);
-
-// --- END: DATA MOCK ---
-
-const rekomendasiItems = ref([]);
-const detectedDiseaseName = ref('');
-// Judul kondisi berdasarkan penyakit
-const diseaseHeaderMap = {
-  "Bercak Daun": "Tanaman terkena Bercak Daun, segera lakukan pengendalian!",
-  "Hawar Daun": "Hawar Daun terdeteksi, lakukan penanganan secepatnya.",
-  "Karat Daun": "Tanaman terkena Karat Daun, berikut solusinya.",
-  "Busuk Batang": "Busuk Batang terdeteksi, lakukan tindakan pencegahan!",
-  "Sehat": "Tanaman Anda sehat, lanjutkan perawatan terbaik.",
-  "Tidak Terdeteksi": "Belum ada gejala penyakit yang terdeteksi.",
-  "default": "Dapatkan rekomendasi terbaik untuk kondisi pepaya Anda."
-};
-const diseaseDescMap = {
-  "Bercak Daun": "Pilih fungisida sesuai rekomendasi dan lakukan pemangkasan daun terinfeksi.",
-  "Hawar Daun": "Semprotkan fungisida dan hindari penyiraman daun secara langsung.",
-  "Karat Daun": "Gunakan fungisida triazol dan buang daun yang parah.",
-  "Busuk Batang": "Jaga drainase, potong bagian busuk, dan gunakan fungisida tembaga.",
-  "Sehat": "Teruskan pola perawatan, pemupukan, dan monitoring rutin.",
-  "Tidak Terdeteksi": "Jika ada gejala baru, lakukan deteksi ulang atau konsultasi ahli.",
-  "default": ""
-};
-
-// Fungsi utama untuk memfilter/mengambil rekomendasi
-// NANTINYA: Fungsi ini akan memanggil API Backend
-const fetchRekomendasi = async () => {
-  loading.value = true;
-  error.value = '';
-
-  const disease = route.query.disease;
-  detectedDiseaseName.value = disease || 'Tidak Terdeteksi';
-
-  userLocation.value = selectedLocation.value; 
-
-  await new Promise(resolve => setTimeout(resolve, 350)); // Simulasi loading
-
-  // FILTER UTAMA
-  if (disease) {
-    const filtered = allRekomendasiItemsMock.value.filter(item =>
-      item.untuk_penyakit.toLowerCase() === disease.toLowerCase()
-    );
-    if (filtered.length > 0) {
-      rekomendasiItems.value = filtered;
-    } else if (disease.toLowerCase() === 'sehat') {
-      rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Sehat');
-    } else {
-      // Penyakit tidak dikenal atau deteksi gagal
-      rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Tidak Terdeteksi');
+// Load detection history from localStorage
+function loadDetectionHistory() {
+  const saved = localStorage.getItem('detectionHistory')
+  if (saved) {
+    try {
+      detectionHistory.value = JSON.parse(saved)
+    } catch (e) {
+      console.error('Failed to load detection history:', e)
+      detectionHistory.value = []
     }
+  }
+}
+
+// Format time utility
+function formatTime(timestamp) {
+  const date = new Date(timestamp)
+  return date.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// Get header text based on selected detection
+function getHeaderText() {
+  if (!selectedDetection.value) {
+    return "Pilih hasil deteksi untuk mendapatkan rekomendasi penanganan"
+  }
+  
+  const disease = selectedDetection.value.className
+  const headerMap = {
+    "Bercak Daun": "Penanganan Bercak Daun - Segera lakukan tindakan!",
+    "Hawar Daun": "Penanganan Hawar Daun - Atasi sebelum menyebar!",
+    "Karat Daun": "Penanganan Karat Daun - Lindungi tanaman Anda!",
+    "Busuk Batang": "Penanganan Busuk Batang - Tindakan segera diperlukan!",
+    "Sehat": "Tanaman Sehat - Tingkatkan kualitas buah!"
+  }
+  
+  return headerMap[disease] || "Rekomendasi penanganan tanaman pepaya"
+}
+
+// Get description text based on selected detection
+function getDescriptionText() {
+  if (!selectedDetection.value) {
+    return "Dapatkan rekomendasi penanganan yang tepat berdasarkan hasil deteksi penyakit tanaman pepaya Anda."
+  }
+  
+  const disease = selectedDetection.value.className
+  const descMap = {
+    "Bercak Daun": "Ikuti panduan lengkap untuk mengatasi bercak daun dan mencegah penyebarannya.",
+    "Hawar Daun": "Terapkan langkah-langkah pengendalian hawar daun yang efektif dan aman.",
+    "Karat Daun": "Lakukan penanganan karat daun dengan metode yang terbukti ampuh.",
+    "Busuk Batang": "Selamatkan tanaman dengan penanganan busuk batang yang tepat sasaran.",
+    "Sehat": "Optimalkan kesehatan tanaman dan tingkatkan kualitas serta kuantitas buah pepaya."
+  }
+  
+  return descMap[disease] || "Ikuti rekomendasi terbaik untuk kesehatan tanaman pepaya Anda."
+}
+
+// Get purpose color for tag
+function getPurposeColor(disease) {
+  const colorMap = {
+    'Bercak Daun': '#ff6b35',
+    'Hawar Daun': '#f7931e',
+    'Karat Daun': '#9b59b6',
+    'Busuk Batang': '#e74c3c',
+    'Sehat': '#27ae60'
+  }
+  return colorMap[disease] || '#6c757d'
+}
+
+// Get card class based on recommendation type
+function getCardClass(type) {
+  return {
+    'treatment-card': type === 'treatment',
+    'prevention-card': type === 'prevention',
+    'maintenance-card': type === 'maintenance'
+  }
+}
+
+// Recommendations data based on disease type
+const recommendationsData = {
+  "Bercak Daun": [
+    {
+      id: 1,
+      type: 'treatment',
+      category: 'Pengobatan',
+      icon: '💊',
+      title: 'Aplikasi Fungisida',
+      description: 'Gunakan fungisida berbahan aktif Propineb atau Mankozeb untuk mengendalikan bercak daun secara efektif.',
+      steps: [
+        'Campurkan fungisida sesuai dosis pada kemasan (biasanya 2-3 gram per liter air)',
+        'Semprotkan pada seluruh bagian daun, terutama bagian bawah daun',
+        'Lakukan penyemprotan pada pagi atau sore hari',
+        'Ulangi aplikasi setiap 7-10 hari selama 3-4 kali'
+      ],
+      tips: [
+        'Aplikasi saat cuaca tidak hujan untuk hasil optimal',
+        'Gunakan APD (masker, sarung tangan) saat menyemprot',
+        'Rotasi fungisida untuk mencegah resistensi'
+      ]
+    },
+    {
+      id: 2,
+      type: 'prevention',
+      category: 'Pencegahan',
+      icon: '🛡️',
+      title: 'Sanitasi Kebun',
+      description: 'Lakukan pembersihan dan sanitasi kebun untuk mencegah penyebaran penyakit bercak daun.',
+      steps: [
+        'Buang dan musnahkan daun yang terinfeksi',
+        'Pangkas cabang yang terlalu rapat untuk sirkulasi udara',
+        'Bersihkan gulma di sekitar tanaman',
+        'Atur jarak tanam yang cukup (minimal 3-4 meter)'
+      ],
+      tips: [
+        'Bakar daun terinfeksi, jangan dikompos',
+        'Sterilkan alat pangkas dengan alkohol 70%',
+        'Lakukan sanitasi rutin setiap minggu'
+      ]
+    },
+    {
+      id: 3,
+      type: 'maintenance',
+      category: 'Perawatan',
+      icon: '🌱',
+      title: 'Perbaikan Kondisi Tanaman',
+      description: 'Tingkatkan daya tahan tanaman melalui pemupukan dan perawatan yang tepat.',
+      steps: [
+        'Berikan pupuk NPK dengan perbandingan seimbang',
+        'Tambahkan pupuk organic untuk memperbaiki struktur tanah',
+        'Atur penyiraman agar tidak berlebihan',
+        'Mulsa di sekitar batang untuk menjaga kelembaban'
+      ],
+
+      warning: 'Hindari pemupukan berlebihan yang dapat melemahkan daya tahan tanaman.'
+    }
+  ],
+  
+  "Hawar Daun": [
+    {
+      id: 4,
+      type: 'treatment',
+      category: 'Pengobatan',
+      icon: '🩹',
+      title: 'Pengendalian Hawar Daun',
+      description: 'Aplikasi fungisida sistemik untuk mengendalikan hawar daun yang sudah menyerang.',
+      steps: [
+        'Gunakan fungisida sistemik berbahan aktif Metalaxyl atau Fosetyl-Al',
+        'Semprotkan dengan konsentrasi 2-3 ml per liter air',
+        'Fokus pada daun yang menunjukkan gejala awal',
+        'Aplikasi setiap 5-7 hari hingga gejala terkendali'
+      ],
+      warning: 'Jangan aplikasi saat cuaca hujan atau angin kencang.'
+    },
+    {
+      id: 5,
+      type: 'prevention',
+      category: 'Pencegahan',
+      icon: '💧',
+      title: 'Manajemen Air',
+      description: 'Atur sistem penyiraman dan drainase untuk mencegah kondisi lembab berlebihan.',
+      steps: [
+        'Hindari penyiraman pada daun, siram hanya pada pangkal batang',
+        'Pastikan drainase kebun berfungsi baik',
+        'Kurangi frekuensi penyiraman saat musim hujan',
+        'Gunakan sistem irigasi tetes jika memungkinkan'
+      ],
+      tips: [
+        'Siram pada pagi hari agar tanaman kering saat malam',
+        'Buat parit drainase di kebun yang sering tergenang',
+        'Pantau kelembaban tanah dengan alat ukur'
+      ]
+    }
+  ],
+  
+  "Karat Daun": [
+    {
+      id: 6,
+      type: 'treatment',
+      category: 'Pengobatan',
+      icon: '🔬',
+      title: 'Fungisida Anti-Karat',
+      description: 'Penggunaan fungisida khusus untuk mengatasi penyakit karat daun pada pepaya.',
+      steps: [
+        'Pilih fungisida berbahan aktif Triazol (Propiconazole/Tebuconazole)',
+        'Campurkan 1-2 ml per liter air',
+        'Semprotkan hingga membasahi seluruh permukaan daun',
+        'Ulangi setiap 10-14 hari sebanyak 3-4 kali'
+      ],
+
+      tips: [
+        'Aplikasi saat kelembaban tinggi (pagi/sore)',
+        'Perhatikan periode panen (PHI) sebelum aplikasi',
+        'Rotasi dengan fungisida berbeda untuk mencegah resistensi'
+      ]
+    },
+    {
+      id: 7,
+      type: 'prevention',
+      category: 'Pencegahan',
+      icon: '🌬️',
+      title: 'Peningkatan Sirkulasi Udara',
+      description: 'Perbaiki sirkulasi udara untuk mencegah kondisi yang mendukung perkembangan karat daun.',
+      steps: [
+        'Pangkas cabang dan daun yang terlalu rapat',
+        'Atur jarak tanam minimal 4-5 meter antar pohon',
+        'Buang tunas air dan cabang yang tidak produktif',
+        'Kontrol gulma tinggi di sekitar tanaman'
+      ]
+    }
+  ],
+  
+  "Busuk Batang": [
+    {
+      id: 8,
+      type: 'treatment',
+      category: 'Darurat',
+      icon: '🚨',
+      title: 'Penanganan Darurat Busuk Batang',
+      description: 'Tindakan segera untuk menyelamatkan tanaman dari busuk batang yang parah.',
+      steps: [
+        'Potong bagian batang yang busuk hingga jaringan sehat',
+        'Oleskan pasta fungisida tembaga pada luka potong',
+        'Aplikasikan fungisida sistemik pada seluruh tanaman',
+        'Perbaiki drainase di sekitar tanaman'
+      ],
+
+      warning: 'Sterilkan alat potong dengan alkohol 70% sebelum dan sesudah digunakan.'
+    },
+    {
+      id: 9,
+      type: 'prevention',
+      category: 'Drainase',
+      icon: '🏗️',
+      title: 'Perbaikan Sistem Drainase',
+      description: 'Perbaiki sistem drainase untuk mencegah genangan air yang memicu busuk batang.',
+      steps: [
+        'Buat saluran drainase di sekitar kebun',
+        'Tinggikan bedengan tanaman pepaya',
+        'Tambahkan bahan organik untuk memperbaiki porositas tanah',
+        'Pasang mulsa untuk mengatur kelembaban tanah'
+      ],
+
+    }
+  ],
+  
+  "Sehat": [
+    {
+      id: 10,
+      type: 'maintenance',
+      category: 'Optimalisasi',
+      icon: '🏆',
+      title: 'Peningkatan Kualitas Buah',
+      description: 'Program perawatan untuk mengoptimalkan kualitas dan kuantitas buah pepaya yang sehat.',
+      steps: [
+        'Berikan pupuk khusus pembungaan dan pembuahan',
+        'Lakukan pemangkasan cabang non-produktif',
+        'Atur pengairan yang konsisten',
+        'Aplikasi pupuk mikro untuk kualitas buah'
+      ],
+
+      tips: [
+        'Pupuk kalium tinggi saat fase pembungaan',
+        'Pangkas buah berlebihan untuk meningkatkan ukuran',
+        'Panen buah pada tingkat kematangan optimal'
+      ]
+    },
+    {
+      id: 11,
+      type: 'prevention',
+      category: 'Pencegahan',
+      icon: '🛡️',
+      title: 'Program Pencegahan Penyakit',
+      description: 'Tindakan pencegahan untuk mempertahankan kesehatan tanaman pepaya.',
+      steps: [
+        'Monitoring rutin setiap minggu',
+        'Aplikasi fungisida preventif sebulan sekali',
+        'Sanitasi kebun secara berkala',
+        'Rotasi dengan tanaman penutup tanah'
+      ],
+
+    }
+  ]
+}
+
+// Update recommendations based on selected detection
+function updateRecommendations() {
+  if (selectedDetectionIndex.value === '') {
+    selectedDetection.value = null
+    currentRecommendations.value = []
+    return
+  }
+  
+  loading.value = true
+  
+  // Simulate loading time
+  setTimeout(() => {
+    selectedDetection.value = detectionHistory.value[selectedDetectionIndex.value]
+    const disease = selectedDetection.value.className
+    currentRecommendations.value = recommendationsData[disease] || []
+    loading.value = false
+  }, 500)
+}
+
+// Export recommendations
+function exportRecommendations() {
+  if (!selectedDetection.value || currentRecommendations.value.length === 0) return
+  
+  const disease = selectedDetection.value.className
+  const confidence = (selectedDetection.value.probability * 100).toFixed(1)
+  const timestamp = new Date().toLocaleString('id-ID')
+  
+  let exportText = `REKOMENDASI PENANGANAN TANAMAN PEPAYA\n`
+  exportText += `================================================\n\n`
+  exportText += `Kondisi: ${disease}\n`
+  exportText += `Tingkat Kepercayaan: ${confidence}%\n`
+  exportText += `Tanggal Export: ${timestamp}\n\n`
+  
+  currentRecommendations.value.forEach((rec, index) => {
+    exportText += `${index + 1}. ${rec.title}\n`
+    exportText += `Kategori: ${rec.category}\n`
+    exportText += `Deskripsi: ${rec.description}\n`
+    
+    if (rec.steps) {
+      exportText += `Langkah-langkah:\n`
+      rec.steps.forEach((step, i) => {
+        exportText += `   ${i + 1}. ${step}\n`
+      })
+    }
+  
+    if (rec.tips) {
+      exportText += `Tips:\n`
+      rec.tips.forEach(tip => {
+        exportText += `   - ${tip}\n`
+      })
+    }
+    
+    if (rec.warning) {
+      exportText += `⚠️ Perhatian: ${rec.warning}\n`
+    }
+    
+    exportText += `\n`
+  })
+  
+  const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', `rekomendasi-${disease}-${new Date().toISOString().split('T')[0]}.txt`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  
+  Swal.fire({
+    icon: 'success',
+    title: 'Export Berhasil!',
+    text: 'File rekomendasi telah diunduh',
+    timer: 2000,
+    showConfirmButton: false
+  })
+}
+
+// Share recommendations
+function shareRecommendations() {
+  if (!selectedDetection.value) return
+  
+  const disease = selectedDetection.value.className
+  const confidence = (selectedDetection.value.probability * 100).toFixed(1)
+  
+  const shareText = `🌿 REKOMENDASI PENANGANAN PEPAYA\n\nKondisi: ${disease}\nTingkat Kepercayaan: ${confidence}%\n\nDapatkan rekomendasi lengkap di aplikasi Smart Farm!`
+  
+  if (navigator.share) {
+    navigator.share({
+      title: 'Rekomendasi Penanganan Tanaman Pepaya',
+      text: shareText
+    }).then(() => {
+      console.log('Shared successfully')
+    }).catch((error) => {
+      console.error('Error sharing:', error)
+      fallbackShare(shareText)
+    })
   } else {
-    // Default: tidak terdeteksi
-    rekomendasiItems.value = allRekomendasiItemsMock.value.filter(item => item.untuk_penyakit === 'Tidak Terdeteksi');
+    fallbackShare(shareText)
   }
+}
 
-  loading.value = false;
-};
+function fallbackShare(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    Swal.fire({
+      icon: 'success',
+      title: 'Disalin!',
+      text: 'Teks rekomendasi telah disalin ke clipboard',
+      timer: 2000,
+      showConfirmButton: false
+    })
+  }).catch(() => {
+    Swal.fire({
+      icon: 'info',
+      title: 'Share Manual',
+      html: `<textarea readonly style="width:100%;height:150px;resize:none;">${text}</textarea>`,
+      confirmButtonText: 'OK'
+    })
+  })
+}
 
-
-// Lifecycle hook: Panggil fetchRekomendasi saat komponen dimuat pertama kali
+// Lifecycle
 onMounted(() => {
-  fetchRekomendasi();
-});
-
-// Watcher: Memantau perubahan pada query parameter 'disease' di URL
-// Ini penting jika pengguna menavigasi ke halaman Rekomendasi lagi dengan penyakit yang berbeda tanpa memuat ulang halaman penuh
-watch(() => route.query.disease, (newDisease) => {
-  fetchRekomendasi();
-});
-
-// --- PENTING: Tambahkan watcher ini untuk selectedLocation ---
-// Ini akan memicu fetchRekomendasi setiap kali nilai dropdown selectedLocation berubah
-watch(selectedLocation, (newValue) => {
-  fetchRekomendasi();
-});
-
-
-// Fungsi utilitas untuk memformat angka menjadi format Rupiah
-const formatRupiah = (angka) => {
-  if (angka === 0) return "Gratis";
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0
-  }).format(angka);
-};
-
-// Fungsi untuk memberikan warna pada tag penyakit berdasarkan jenis penyakit
-const getPurposeColor = (penyakit) => {
-  switch (penyakit.toLowerCase()) {
-    case 'bercak daun':
-      return '#23b05c';
-    case 'hawar daun':
-      return '#ff993a';
-    case 'karat daun':
-      return '#a162ef';
-    case 'busuk batang':
-      return '#de4040';
-    case 'sehat':
-      return '#28a745';
-    default:
-      return '#6C757D'; // Tidak terdeteksi
-  }
-};
-
+  loadDetectionHistory()
+})
 </script>
 
 <style scoped>
 .rekomendasi-page-container {
-  padding: 30px;
+  padding: 20px;
   background-color: #f0f2f5;
   min-height: calc(100vh - 60px);
-  border-radius: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .header-section {
   text-align: center;
-  margin-bottom: 30px; 
-  background: linear-gradient(90deg, #CFC33F, #4A7374);
-  padding: 25px 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  padding: 30px 20px;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(39, 174, 96, 0.3);
+  color: white;
 }
 
 .header-section h1 {
-  color: #fff;
   font-size: 2.5rem;
-  margin-bottom: 10px;
-  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+  margin-bottom: 15px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .header-section p {
-  color: #eee;
   font-size: 1.1rem;
-  max-width: 700px;
-  margin: 0 auto;
+  margin: 8px 0;
+  opacity: 0.95;
 }
 
-.header-section p strong {
-    color: #fff;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.location-selector {
-  display: flex;
-  justify-content: center; 
-  align-items: center;
+/* Detection Selector */
+.detection-selector {
   margin-bottom: 30px;
-  padding: 15px;
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  max-width: 500px;
-  margin-left: auto;
-  margin-right: auto;
-  gap: 15px; 
 }
 
-.location-selector label {
-  font-size: 1.1rem;
-  color: #333;
-  /* margin-right: 15px; // Hapus atau kurangi jika pakai gap */
-  font-weight: 600;
-}
-
-.location-selector select {
-  padding: 10px 15px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  min-width: 150px;
-  cursor: pointer;
-  background-color: #0f610f;
-  appearance: none; /* Hapus gaya default select box */
-  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M287%20197.9c-3.7-3.7-9.8-3.7-13.5%200L146.2%2034.4c-3.7-3.7-9.8-3.7-13.5%200l-127.3%20127.3c-3.7%203.7-3.7%209.8%200%2013.5l13.5%2013.5c3.7%203.7%209.8%203.7%2013.5%200L146.2%2093.4l109.8%20109.8c3.7%203.7%209.8%203.7%2013.5%200l13.5-13.5c3.7-3.7%203.7-9.8%200-13.5z%22%2F%3E%3C%2Fsvg%3E'); /* Tambahkan ikon panah custom */
-  background-repeat: no-repeat;
-  background-position: right 10px top 50%;
-  background-size: 12px auto;
-}
-
-.location-selector select:focus {
-  outline: none;
-  border-color: #4A7374;
-  box-shadow: 0 0 0 3px rgba(6, 95, 33, 0.2);
-}
-
-
-/* .rekomendasi-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 25px;
-} */
-.rekomendasi-list {
-  margin-top: 18px;
-}
-
-.no-data {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 50px;
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  color: #666;
-  font-size: 1.1rem;
-}
-
-.loading-message, .error-message {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 30px;
-  font-size: 1.2rem;
-  color: #666;
-}
-
-.error-message {
-  color: #dc3545;
-}
-
-.rekomendasi-card {
-  background-color: #ffffff;
+.selector-card {
+  background: white;
   padding: 25px;
   border-radius: 15px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.selector-card h3 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+}
+
+.no-history {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+}
+
+.scan-link {
+  display: inline-block;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  text-decoration: none;
+  padding: 12px 25px;
+  border-radius: 10px;
+  margin-top: 15px;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.scan-link:hover {
+  transform: translateY(-2px);
+}
+
+.history-dropdown {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.history-dropdown label {
+  font-weight: 600;
+  color: #333;
+  min-width: 150px;
+}
+
+.history-dropdown select {
+  flex: 1;
+  min-width: 300px;
+  padding: 12px 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.history-dropdown select:focus {
+  outline: none;
+  border-color: #27ae60;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+/* Loading */
+.loading-message {
+  text-align: center;
+  padding: 50px;
+  color: #666;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+.loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e9ecef;
+  border-top-color: #27ae60;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* No Selection */
+.no-selection {
+  text-align: center;
+  padding: 50px;
+}
+
+.no-selection-card {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.no-selection-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.no-selection-card h3 {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.no-selection-card p {
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Recommendations Grid */
+.recommendations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 25px;
+}
+
+.rekomendasi-card {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
 }
 
 .rekomendasi-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.treatment-card {
+  border-left: 5px solid #e74c3c;
+}
+
+.prevention-card {
+  border-left: 5px solid #f39c12;
+}
+
+.maintenance-card {
+  border-left: 5px solid #27ae60;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.card-title {
+  display: flex;
   align-items: center;
-  margin-bottom: 15px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  gap: 12px;
+  flex: 1;
+}
+
+.card-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
 }
 
 .card-header h2 {
-  font-size: 1.5rem;
   color: #333;
+  font-size: 1.4rem;
   margin: 0;
+  line-height: 1.3;
 }
 
 .purpose-tag {
-  color: #fff;
-  padding: 5px 10px;
+  color: white;
+  padding: 6px 12px;
   border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: bold;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.card-content {
+  color: #555;
 }
 
 .description {
-  font-size: 0.95rem;
-  color: #555;
-  margin-bottom: 20px;
+  font-size: 1rem;
   line-height: 1.6;
+  margin-bottom: 20px;
+  color: #666;
 }
 
-.price-info {
-  margin-top: auto;
-  margin-bottom: 15px;
+/* Sections */
+.steps-section,
+.ingredients-section,
+.tips-section,
+.warning-section {
+  margin-bottom: 20px;
 }
 
-.price-info h3 {
-  font-size: 1.3rem;
-  color: #28a745;
+.steps-section h4,
+.ingredients-section h4,
+.tips-section h4,
+.warning-section h4 {
+  color: #333;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.steps-list {
+  padding-left: 20px;
   margin: 0;
 }
 
-.price-info span {
-  font-weight: bold;
-}
-
-.location-general-info {
-  border-top: 1px solid #eee;
-  padding-top: 15px;
-}
-
-.location-general-info h4 {
-  font-size: 1rem;
-  color: #4A7374;
-  margin-top: 0;
+.steps-list li {
   margin-bottom: 8px;
+  line-height: 1.5;
+  color: #555;
+  text-align: left;
 }
 
-.location-general-info p {
+.ingredients-list,
+.tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ingredients-list li,
+.tips-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f1f1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ingredients-list li:last-child,
+.tips-list li:last-child {
+  border-bottom: none;
+}
+
+.ingredient-price {
+  color: #27ae60;
+  font-weight: 600;
   font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 5px;
+}
+
+.warning-section {
+  background: #fff3cd;
+  padding: 15px;
+  border-radius: 10px;
+  border-left: 4px solid #ffc107;
+}
+
+.warning-text {
+  margin: 0;
+  color: #856404;
+  font-weight: 500;
+}
+
+/* Quick Actions */
+.quick-actions {
+  margin-top: 40px;
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.quick-actions h3 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 150px;
+  justify-content: center;
+}
+
+.export-btn {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  color: white;
+}
+
+.share-btn {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+}
+
+.scan-btn {
+  background: linear-gradient(135deg, #6f42c1, #5a32a3);
+  color: white;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .rekomendasi-page-container {
+    padding: 15px;
+  }
+  
+  .header-section {
+    padding: 20px 15px;
+  }
+  
+  .header-section h1 {
+    font-size: 2rem;
+  }
+  
+  .selector-card {
+    padding: 20px;
+  }
+  
+  .history-dropdown {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .history-dropdown label {
+    min-width: auto;
+    margin-bottom: 8px;
+  }
+  
+  .history-dropdown select {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .recommendations-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .rekomendasi-card {
+    padding: 20px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .card-title {
+    width: 100%;
+  }
+  
+  .purpose-tag {
+    align-self: flex-start;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .action-btn {
+    width: 100%;
+    max-width: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-section h1 {
+    font-size: 1.8rem;
+  }
+  
+  .header-section p {
+    font-size: 1rem;
+  }
+  
+  .card-icon {
+    font-size: 1.5rem;
+  }
+  
+  .card-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .no-selection-icon {
+    font-size: 3rem;
+  }
+  
+  .no-selection-card {
+    padding: 30px 20px;
+  }
+  
+  .steps-list {
+    padding-left: 15px;
+  }
+  
+  .ingredients-list li,
+  .tips-list li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .ingredient-price {
+    align-self: flex-end;
+  }
+}
+
+/* Animation for cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rekomendasi-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.rekomendasi-card:nth-child(1) { animation-delay: 0.1s; }
+.rekomendasi-card:nth-child(2) { animation-delay: 0.2s; }
+.rekomendasi-card:nth-child(3) { animation-delay: 0.3s; }
+.rekomendasi-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Focus states for accessibility */
+.history-dropdown select:focus,
+.action-btn:focus {
+  outline: 3px solid rgba(39, 174, 96, 0.3);
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .quick-actions,
+  .detection-selector {
+    display: none;
+  }
+  
+  .rekomendasi-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+  
+  .recommendations-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
