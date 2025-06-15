@@ -30,6 +30,8 @@
 import { ref, onMounted } from 'vue'
 import L from 'leaflet'
 import axios from 'axios'
+import Swal from 'sweetalert2'; // <-- TAMBAHKAN BARIS INI
+import { useRouter } from 'vue-router';
 
 const nama = ref('')
 const latitude = ref('')
@@ -37,6 +39,7 @@ const longitude = ref('')
 const foto = ref(null)
 const preview = ref('')
 const error = ref('')
+const router = useRouter();
 
 const onFileChange = (e) => {
   foto.value = e.target.files[0]
@@ -105,6 +108,7 @@ const submitLahan = async () => {
       }
     })
   } catch (e) {
+    console.error("Error submitting lahan:", e);
     error.value = e.response?.data?.error || 'Gagal input lahan'
   }
 }

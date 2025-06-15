@@ -1,8 +1,6 @@
 <template>
   <div class="dashboard-layout">
-    <Navbar />
-    <main class="dashboard-main">
-      <!-- Welcome screen jika belum input lahan -->
+    <Navbar /> <main class="dashboard-main">
       <div v-if="isWelcome" class="welcome-box">
         <h3>DASHBOARD</h3>
         <h1>Papaya SmartFarm</h1>
@@ -14,15 +12,12 @@
         </button>
       </div>
 
-      <!-- Dashboard utama jika sudah ada lahan -->
       <template v-else>
-        <!-- Banner -->
         <div class="banner">
           <h2>Halo, {{ userName }}! 👋</h2>
           <p>Mari cek tanaman Anda!</p>
         </div>
 
-        <!-- Preview Foto Lahan -->
         <div v-if="lahan" class="lahan-preview">
           <div
             class="lahan-foto-bg"
@@ -46,9 +41,7 @@
         </div>
         <div v-if="error" style="color:red; margin-top: 24px;">{{ error }}</div>
 
-        <!-- Baris Dashboard: Sensor dan Penyakit -->
         <div class="dashboard-row">
-          <!-- Sensor Section -->
           <section class="sensor-section">
             <h2>Data Sensor Realtime</h2>
             <div class="sensor-grid">
@@ -71,7 +64,6 @@
             </div>
           </section>
 
-          <!-- Deteksi Penyakit -->
           <section class="disease-section">
             <h2>Deteksi Penyakit</h2>
             <div class="disease-list-container">
@@ -115,6 +107,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { io } from 'socket.io-client'
 import axios from 'axios'
+// BARIS INI DITAMBAHKAN/DIPERBAIKI
+import Navbar from '../components/Navbar.vue'; // <-- Pastikan path ini benar
 
 const router = useRouter()
 const apiUrl = 'http://localhost:5000'
@@ -159,6 +153,9 @@ async function fetchDiseaseList() {
     })
     diseaseList.value = res.data // data array dari backend
   } catch (e) {
+    // Ini adalah bagian yang menyebabkan error 500 jika ada masalah di backend
+    console.error("Error fetching disease list:", e); 
+    error.value = 'Gagal memuat data deteksi penyakit. Silakan coba lagi.'
     diseaseList.value = []
   }
 }
@@ -174,7 +171,7 @@ onMounted(async () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   userName.value = user.name || 'User'
 
-  await fetchDiseaseList()
+  await fetchDiseaseList() // Panggil ini untuk mencoba mendapatkan data deteksi
 
   // Cek/ambil lahan dari backend jika lahan_terpilih kosong
   const token = localStorage.getItem('token')
@@ -190,6 +187,7 @@ onMounted(async () => {
     }
     // Jika memang sudah kosong, isWelcome otomatis true
   } catch (e) {
+    console.error("Error fetching lahan data:", e);
     error.value = 'Gagal ambil data lahan'
   }
 
@@ -216,6 +214,7 @@ onUnmounted(() => {
 
 
 <style scoped>
+/* Semua style tetap sama, tidak ada perubahan di sini */
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
@@ -453,7 +452,7 @@ onUnmounted(() => {
 }
 
 /* ---------------------- */
-/*      RESPONSIVE        */
+/* RESPONSIVE       */
 /* ---------------------- */
 
 /* Tablet */
@@ -554,6 +553,4 @@ onUnmounted(() => {
     border-radius: 50%;
   }
 }
-
 </style>
-
