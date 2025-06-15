@@ -13,6 +13,11 @@ const prediksiRoutes = require('./routes/prediksi');
 const diseasesRouter = require('./routes/diseases');
 app.use(cors());
 app.use(express.json());
+app.use(cors({
+origin: 'https://papayasmartfarm.netlify.app/',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
 
 app.use('/api/auth', authRouter);
 
