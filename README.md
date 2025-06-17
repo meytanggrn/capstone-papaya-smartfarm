@@ -4,7 +4,7 @@
 
 Papaya Smart Farm adalah solusi pertanian cerdas berbasis IoT, Machine Learning, dan web platform 
 yang dirancang untuk memantau dan memprediksi kondisi tanaman pepaya secara real-time. 
-Proyek ini dikembangkan sebagai bagian dari **Capstone Project Dicoding x DBS Indonesia**, dengan tujuan 
+Proyek ini dikembangkan sebagai bagian dari ***Capstone Project Dicoding x DBS Indonesia***, dengan tujuan 
 untuk membantu petani meningkatkan produktivitas dan efisiensi melalui teknologi yang mudah diakses dan berbasis data.
 
 ## ✨ Fitur Utama
