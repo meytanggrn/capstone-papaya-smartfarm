@@ -21,8 +21,8 @@ untuk membantu petani meningkatkan produktivitas dan efisiensi melalui teknologi
 * **Frontend:** Vue.js (dengan Vite)
 * **Backend:** Node.js (Express.js)
 * **Database:** PostgreSQL
-* **Machine Learning:** Python (TensorFlow/PyTorch, scikit-learn - *sebutkan spesifiknya jika ada*)
-* **Lain-lain:** Axios, Vue Router, Socket.IO, SweetAlert2, DBeaver (untuk pengelolaan DB), Railway App (untuk deployment), Ngrok (untuk *tunneling* lokal ke publik).
+* **Machine Learning:** Python (TensorFlow/PyTorch)
+* **Lain-lain:** Axios, Vue Router, Socket.IO, SweetAlert2, Railway App (untuk deployment)
 
 # 👨‍💻 Tim Pengembang
 - Meytanggrn — [GitHub](https://github.com/meytanggrn)
